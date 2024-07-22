@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Taxi Bookings{% endblock %}
+
+{% block content %}
+<body class="taxi-bookings-body">
+    <h1 class="taxi-bookings-header">Taxi Bookings</h1>
+    <a href="{% url 'book_taxi' %}" class="back-btn">Make a new Booking</a>
+    <p></p>
+
+    {% if bookings %}
+        <form method="post" action="{% url 'display_taxi_details' %}">
+            {% csrf_token %}
+            <table class="taxi-bookings-table">
+                <thead>
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>Customer</th>
+                        <th>
+                            Taxi ID
+                            <button type="submit" name="sort_by_taxi_id">
+                                Sort
+                             {% if sort_order == 'asc' %}▲{% else %}▼{% endif %}
+                            </button>
+                        </th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Pickup Time</th>
+                        <th>Drop Time</th>
+                        <th>Fare</th>
+                        <th>Booking Date</th>
+                        <th>Trips</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in bookings %}
+                        <tr>
+                            <td>{{ booking.booking_id }}</td>
+                            <td>{{ booking.customer.customer_name }}</td>
+                            <td>{{ booking.taxi.taxi_id }}</td>
+                            <td>{{ booking.pickup_point }}</td>
+                            <td>{{ booking.drop_point }}</td>
+                            <td>{{ booking.pickup_time|date:"Y-m-d H:i" }}</td>
+                            <td>{{ booking.drop_time|date:"Y-m-d H:i" }}</td>
+                            <td>₹{{ booking.fare_amount }}</td>
+                            <td>{{ booking.booking_date|date:"Y-m-d" }}</td>
+                            <td><a>View Customer Trips</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <input type="hidden" name="sort_order" value="{{ sort_order }}">
+        </form>
+    {% else %}
+        <p>No bookings found.</p>
+    {% endif %}
+</body>
+{% endblock %}

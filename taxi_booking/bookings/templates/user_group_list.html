@@ -1,0 +1,26 @@
+<!-- user_group_list.html -->
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Users and Their Associated Groups</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Groups</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user, groups in user_groups.items %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>
+                        {% for group in groups %}
+                            {{ group.name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

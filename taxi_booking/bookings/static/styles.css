@@ -1,0 +1,680 @@
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+th {
+    background-color: #f2f2f2;
+}
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+
+
+.messages {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: auto;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.messages li {
+    list-style: none;
+    margin: 5px 0;
+    padding: 10px;
+    border-radius: 5px;
+    color: #fff;
+    opacity: 0.9;
+    animation: fade-in-out 5s forwards;
+}
+
+.messages li.success {
+    background-color: #4CAF50; 
+}
+
+.messages li.error {
+    background-color: #F44336;
+}
+
+.messages li.warning {
+    background-color: #0772ff;
+}
+
+.messages li.info {
+    background-color: #010408;
+}
+
+.cancel-booking-messages {
+    margin-bottom: 20px;
+}
+
+.cancel-booking-messages .cancel-booking-success {
+    color: #155724;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.cancel-booking-messages .cancel-booking-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+@keyframes fade-in-out {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    80% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+.book-taxi-body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #333;
+}
+
+
+.book-taxi-header {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+}
+.book-taxi-form {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 5px;
+}
+
+.book-taxi-form label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.book-taxi-form input[type="text"],
+.book-taxi-form input[type="number"],
+.book-taxi-form select,
+.book-taxi-form input[type="datetime-local"] {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.book-taxi-form button {
+    background-color: #5cb85c;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.book-taxi-form button:hover {
+    background-color: #4cae4c;
+}
+
+
+.book-taxi-messages {
+    margin-bottom: 20px;
+}
+
+.book-taxi-messages .book-taxi-success {
+    color: #155724;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.book-taxi-messages .book-taxi-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.taxi-bookings-body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #333;
+}
+
+
+.taxi-bookings-header {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+
+.taxi-bookings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.taxi-bookings-table th, .taxi-bookings-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.taxi-bookings-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.taxi-bookings-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+
+.taxi-bookings-link {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.taxi-bookings-link:hover {
+    text-decoration: underline;
+}
+
+.customer-body {
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+.customer-header{
+    text-align: center;
+    margin-bottom: 30px;
+    color: #01080f;
+}
+
+.trip {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.trip p {
+    margin: 5px 0;
+    font-size: 16px;
+}
+
+.trip p strong {
+    font-weight: bold;
+    margin-right: 5px;
+}
+.booking-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.modify-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.modify-btn:hover {
+    background-color: #45a049;
+}
+
+.cancel-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    background-color: #f44336; 
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.cancel-btn:hover {
+    background-color: #d32f2f; 
+}
+.button-cancel {
+    background-color: #d9534f;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.button-cancel:hover {
+    background-color: #c9302c;
+}
+.cancel-booking-body {
+    font-family: Arial, sans-serif;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.cancel-booking-header{
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 10px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #f0f0f0;
+    color: #333;
+    line-height: 1.6;
+    padding: 20px;
+}
+
+h1 {
+    font-size: 2.5em;
+    color: #2c3e50;
+    background-color: #ecf0f1;
+    padding: 20px;
+    text-align: center;
+    border-radius: 5px;
+    margin-bottom: 30px;
+}
+
+p {
+    font-size: 1.1em;
+    margin-bottom: 10px;
+}
+
+
+.alink{
+    display: inline-block;
+    background-color: #3498db;
+    color: #ffffff;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    margin-bottom: 20px;
+}
+
+
+.alink:hover {
+    background-color: #2980b9;
+}
+
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+
+.footer {
+    text-align: center;
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #34495e;
+    color: #ecf0f1;
+    border-radius: 5px;
+}
+.taxi-bookings-table th button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    color: #007bff;
+    padding: 0 5px;
+}
+
+.taxi-bookings-table th button:hover {
+    text-decoration: underline;
+}
+/* Navbar styling */
+.navbar {
+    background-color: #f8f9fa; /* Light background */
+    padding: 10px; /* Padding around the navbar */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+/* Home button styling */
+.home-button {
+    background-color: #007bff; /* Primary button color */
+    color: white; /* Text color */
+    padding: 10px 20px; /* Padding for the button */
+    text-decoration: none; /* Remove underline */
+    border-radius: 5px; /* Rounded corners */
+    transition: background-color 0.3s; /* Smooth transition */
+}
+
+/* Hover effect */
+.home-button:hover {
+    background-color: #0056b3; /* Darker shade on hover */
+}
+
+/* Active/Focused state */
+.home-button:focus {
+    outline: none; /* Remove default focus outline */
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Custom focus shadow */
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+    margin-top: 10px;
+}
+
+.cancel-button {
+    display: inline-block;
+    padding: 10px 15px;
+    background-color: #b5615b;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.cancel-button:hover {
+    background-color: #cd4a4a;
+}
+
+/* Ensure the Book Taxi button matches the cancel button style */
+.book-taxi-form button[type="submit"] {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.book-taxi-form button[type="submit"]:hover {
+    background-color: #45a049;
+}
+.back-btn {
+    display: inline-block;
+    padding: 5px 10px;
+    background-color: #5d96d7;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.back-btn:hover {
+    background-color: #1c76d0;
+}
+.back-to-bookings {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.body-container {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.heading-primary, .heading-secondary {
+    color: #2c3e50;
+}
+
+form.form-container {
+    background-color: #f4f4f4;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+form.form-container button {
+    background-color: #3498db;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+form.form-container button:hover {
+    background-color: #2980b9;
+}
+
+table.trip-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table.trip-table th, table.trip-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+table.trip-table th {
+    background-color: #3498db;
+    color: white;
+}
+
+table.trip-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+table.trip-table tr:hover {
+    background-color: #e6e6e6;
+}
+
+p.no-trips-message {
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+@media screen and (max-width: 600px) {
+    table.trip-table, table.trip-table tr, table.trip-table td {
+        display: block;
+    }
+    
+    table.trip-table tr {
+        margin-bottom: 10px;
+    }
+    
+    table.trip-table td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+    }
+    
+    table.trip-table td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: bold;
+    }
+}
+
+
+
+.auth-wrapper {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 30px;
+}
+
+.auth-heading {
+    color: #333;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-form-container {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 30px;
+}
+
+.input-wrapper {
+    margin-bottom: 20px;
+}
+
+.input-label {
+    display: block;
+    margin-bottom: 5px;
+    color: #666;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.auth-button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.auth-button:hover {
+    background-color: #0056b3;
+}
+
+.additional-options {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.option-link {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.option-link:hover {
+    text-decoration: underline;
+}
+
+
+.error-text {
+    color: #dc3545;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+
+@media (max-width: 480px) {
+    .auth-wrapper {
+        padding: 20px;
+    }
+}
+.logout-button {
+    background-color: #007bff; /* Primary button color */
+    color: white; /* Text color */
+    padding: 10px 20px; /* Padding for the button */
+    text-decoration: none; /* Remove underline */
+    border-radius: 5px; /* Rounded corners */
+    transition: background-color 0.3s;
+     /* Smooth transition */ /* float the button to the right */
+  }
+  
+  .logout-button:hover {
+    background-color: #0056b3;  /* darker orange on hover */
+  }
+
+  .logout-button:focus {
+    outline: none; /* Remove default focus outline */
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Custom focus shadow */
+}

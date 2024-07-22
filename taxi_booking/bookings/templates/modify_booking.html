@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Modify Booking{% endblock %}
+
+{% block content %}
+<body class="book-taxi-body">
+    <h1 class="book-taxi-header">Modify Booking</h1>
+    
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+            {{ message }}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    
+    <form method="post" class="book-taxi-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="hidden" name="customer_id" value="{{ booking.customer.customer_id }}">
+       
+        <div class="back-to-bookings">
+            <button type="submit">Modify Booking</button>
+            <a href="{% url 'view_customer_trips' booking.customer.customer_id %}" class="back-btn">Back to bookings</a>
+        </div>
+    </form>
+</body>
+{% endblock %}

@@ -1,0 +1,19 @@
+<title>Taxi Booking Application</title>
+{% load static %}
+<link rel="stylesheet" href="{% static 'styles.css' %}">
+<body>
+    <div class="container">
+        <h1>Taxi Booking Application</h1>
+        <p>if you want to book tickets</p>
+        <a href="{% url 'book_taxi' %}" class="alink">Click here to book</a>
+        <p>Already a user,</p>
+        <a href="{% url 'display_taxi_details' %}" class="alink">Click here to view Bookings</a>
+        <p>View Trips,</p>
+        <a href="{% url 'view_trips' %}" class="alink">Click here to view Trips</a>
+        
+       
+    </div>
+    <footer class="footer">
+        <p>&copy; 2024 Taxi Booking Application. All rights reserved.</p>
+    </footer>
+</body>

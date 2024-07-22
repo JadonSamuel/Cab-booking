@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Customer Trips{% endblock %}
+
+{% block content %}
+<body class="customer-body">
+    <h1 class="customer-header">Customer Trips</h1>
+    <div class="back-to-bookings">
+        <a href="{% url 'display_taxi_details' %}" class="back-btn">Back to Bookings</a>
+    </div>
+    {% for booking in customer_bookings %}
+    <div class="trip">
+        <p><strong>Booking ID:</strong> {{ booking.booking_id }}</p>
+        <p><strong>Customer Name:</strong> {{ booking.customer.customer_name }}</p>
+        <p><strong>Taxi ID:</strong> {{ booking.taxi.taxi_id }}</p>
+        <p><strong>From:</strong> {{ booking.pickup_point }}</p>
+        <p><strong>To:</strong> {{ booking.drop_point }}</p>
+        <p><strong>Pickup Time:</strong> {{ booking.pickup_time|date:"Y-m-d H:i" }}</p>
+        <p><strong>Drop Time:</strong> {{ booking.drop_time|date:"Y-m-d H:i" }}</p>
+        <p><strong>Fare:</strong> ₹{{ booking.fare_amount }}</p>
+        <p><strong>Booking Date:</strong> {{ booking.booking_date|date:"Y-m-d" }}</p>
+        <div class="booking-actions">
+            <a href="{% url 'cancel_booking' %}" class="cancel-btn">Cancel Booking</a>
+            <a href="{% url 'modify_booking' %}?booking_id={{ booking.booking_id }}" class="modify-btn">Modify Booking</a>
+        </div>
+    </div>
+    {% endfor %}
+</body>
+{% endblock %}

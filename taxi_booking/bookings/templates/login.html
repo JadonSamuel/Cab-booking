@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <h2 class="book-taxi-header">Login</h2>
+    <form method="post" class="auth-form-container">
+        {% csrf_token %}
+        <div class="input-wrapper">
+            <label for="{{ form.username.id_for_label }}" class="input-label">Username:</label>
+            {{ form.username }}
+        </div>
+        <div class="input-wrapper">
+            <label for="{{ form.password.id_for_label }}" class="input-label">Password:</label>
+            {{ form.password }}
+        </div>
+        {% if form.errors %}
+            <p class="error-text">Your username and password didn't match. Please try again.</p>
+        {% endif %}
+        <button type="submit" class="auth-button">Login</button>
+    </form>
+    <div class="additional-options">
+        <p>Don't have an account? <a href="{% url 'register' %}" class="option-link">Register here</a></p>
+        <p>Forgot your password? <a href="{% url 'password_reset' %}" class="option-link">Reset it here</a></p>
+    </div>
+</div>
+{% endblock %}

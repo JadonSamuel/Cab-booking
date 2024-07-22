@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Taxi Bookings{% endblock %}
+
+{% block content %}
+<body>
+    <header>
+        <h1>Welcome, {{ user.username }}!</h1>
+        <p>Role: {{ user_role }}</p>
+        
+    
+    <main>
+        <h2>Upcoming Bookings</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Booking ID</th>
+                    <th>Customer</th>
+                    <th>Pickup Point</th>
+                    <th>Drop Point</th>
+                    <th>Pickup Time</th>
+                    <th>Drop Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td>{{ booking.booking_id }}</td>
+                    <td>{{ booking.customer.customer_name }}</td>
+                    <td>{{ booking.pickup_point }}</td>
+                    <td>{{ booking.drop_point }}</td>
+                    <td>{{ booking.pickup_time }}</td>
+                    <td>{{ booking.drop_time }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+</body>
+{% endblock %}
