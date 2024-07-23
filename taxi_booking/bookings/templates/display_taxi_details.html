@@ -34,19 +34,23 @@
                 </thead>
                 <tbody>
                     {% for booking in bookings %}
-                        <tr>
-                            <td>{{ booking.booking_id }}</td>
-                            <td>{{ booking.customer.customer_name }}</td>
-                            <td>{{ booking.taxi.taxi_id }}</td>
-                            <td>{{ booking.pickup_point }}</td>
-                            <td>{{ booking.drop_point }}</td>
-                            <td>{{ booking.pickup_time|date:"Y-m-d H:i" }}</td>
-                            <td>{{ booking.drop_time|date:"Y-m-d H:i" }}</td>
-                            <td>₹{{ booking.fare_amount }}</td>
-                            <td>{{ booking.booking_date|date:"Y-m-d" }}</td>
-                            <td><a>View Customer Trips</a></td>
-                        </tr>
-                    {% endfor %}
+                <tr>
+                     <td>{{ booking.booking_id }}</td>
+                     <td>{{ booking.customer.customer_name }}</td>
+                     <td>{{ booking.taxi.taxi_id }}</td>
+                     <td>{{ booking.pickup_point }}</td>
+                     <td>{{ booking.drop_point }}</td>
+                     <td>{{ booking.pickup_time|date:"Y-m-d H:i" }}</td>
+                     <td>{{ booking.drop_time|date:"Y-m-d H:i" }}</td>
+                     <td>₹{{ booking.fare_amount }}</td>
+                     <td>{{ booking.booking_date|date:"Y-m-d" }}</td>
+                     <td>
+                     {% if user.is_superuser or user.customer == booking.customer %}
+                     <a href="{% url 'view_customer_trips' booking.customer.customer_id %}">View Customer Trips</a>
+                     {% endif %}
+                     </td>
+                </tr>
+                {% endfor %}
                 </tbody>
             </table>
             <input type="hidden" name="sort_order" value="{{ sort_order }}">

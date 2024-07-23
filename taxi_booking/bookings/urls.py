@@ -15,6 +15,6 @@ urlpatterns = [
     path('register/', views.register, name='register'),
     path('driver-dashboard/', views.driver_dashboard, name='driver_dashboard'),
     path('user_group_list/', views.user_group_list, name='user_group_list'),
-    path('create-groups/',views.create_groups_view,name='create_group_view'),
+    
    
 ]

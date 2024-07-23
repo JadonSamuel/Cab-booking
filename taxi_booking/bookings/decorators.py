@@ -1,13 +1,32 @@
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.shortcuts import redirect
+from django.contrib.auth.decorators import user_passes_test
+from django.core.exceptions import PermissionDenied
 
+def admin_required(function):
+    def wrap(request, *args, **kwargs):
+        if request.user.is_superuser:
+            return function(request, *args, **kwargs)
+        else:
+            raise PermissionDenied
+    wrap.__doc__ = function.__doc__
+    wrap.__name__ = function.__name__
+    return wrap
 
-def driver_group_required(view_func):
-    @login_required
-    def _wrapped_view(request, *args, **kwargs):
-        if not request.user.groups.filter(name='Driver').exists():
-            messages.error(request, "Only Drivers can view booking.")
-            return redirect('login') 
-        return view_func(request, *args, **kwargs)
-    return _wrapped_view
+def driver_required(function):
+    def wrap(request, *args, **kwargs):
+        if request.user.groups.filter(name='Driver').exists():
+            return function(request, *args, **kwargs)
+        else:
+            raise PermissionDenied
+    wrap.__doc__ = function.__doc__
+    wrap.__name__ = function.__name__
+    return wrap
+
+def customer_required(function):
+    def wrap(request, *args, **kwargs):
+        if hasattr(request.user, 'customer'):
+            return function(request, *args, **kwargs)
+        else:
+            raise PermissionDenied
+    wrap.__doc__ = function.__doc__
+    wrap.__name__ = function.__name__
+    return wrap

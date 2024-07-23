@@ -5,21 +5,9 @@ from .forms import BookingForm,CancelBookingForm,ModifyBookingForm,TimeInputForm
 from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required,user_passes_test
-from .decorators import driver_group_required
+from .decorators import driver_required,admin_required,customer_required
 from django.contrib.auth.models import User, Group
-
-
-def create_groups_view(request):
-    groups = ['Admin', 'Driver', 'Customer']
-    
-    for group_name in groups:
-        group, created = Group.objects.get_or_create(name=group_name)
-        if created:
-            print(f'Successfully created group "{group_name}"')
-        else:
-            print(f'Group "{group_name}" already exists')
-
-    return HttpResponse("Groups created successfully")
+from django.db.models import Q
 
 
 points = ['A', 'B', 'C', 'D', 'E', 'F']
@@ -101,6 +89,7 @@ def is_taxi_available_for_modification(taxi, original_booking, new_pickup_point,
     return True
 
 @login_required
+@customer_required
 def book_taxi(request):
     if request.method == 'POST':
         form = BookingForm(request.POST)
@@ -244,9 +233,17 @@ def display_bookings(request):
         return redirect('driver_dashboard')
 
     
-    bookings = Booking.objects.all().order_by('-booking_date', '-booking_time')
-    sort_order = request.POST.get('sort_order', 'asc')
+    if hasattr(request.user, 'customer'):
+        bookings = Booking.objects.filter(customer=request.user.customer).order_by('-booking_date', '-booking_time')
     
+    elif request.user.is_superuser:
+        bookings = Booking.objects.all().order_by('-booking_date', '-booking_time')
+    else:
+        messages.error(request,"You dont have access to anything")
+        return redirect('view_trips') 
+
+    sort_order = request.POST.get('sort_order', 'asc')
+
     if request.method == 'POST' and 'sort_by_taxi_id' in request.POST:
         if sort_order == 'asc':
             bookings = bookings.order_by('taxi__taxi_id')
@@ -254,19 +251,27 @@ def display_bookings(request):
         else:
             bookings = bookings.order_by('-taxi__taxi_id')
             sort_order = 'asc'
-    
+
     context = {
         'bookings': bookings,
-        'sort_order': sort_order
+        'sort_order': sort_order,
+        'is_admin': request.user.is_superuser,
+        'is_customer': hasattr(request.user, 'customer')
     }
     return render(request, 'display_taxi_details.html', context)
 
 @login_required
+@customer_required
 def modify_booking(request):
     booking_id = request.GET.get('booking_id')
 
     if booking_id:
         booking = get_object_or_404(Booking, booking_id=booking_id)
+        
+       
+        if booking.customer.user != request.user:
+            messages.error(request, "You don't have permission to modify this booking.")
+            return redirect('display_taxi_details')
     else:
         messages.error(request, "No booking ID provided.")
         return redirect('display_taxi_details')
@@ -365,19 +370,20 @@ def modify_booking(request):
     return render(request, 'modify_booking.html', {'form': form, 'booking': booking})
 
 @login_required
+@customer_required
 def cancel_booking(request):
     if request.method == 'POST':
         form = CancelBookingForm(request.POST)
         if form.is_valid():
             booking_id = form.cleaned_data['booking_id']
-            customer_name = form.cleaned_data['customer_name']
 
             try:
-                booking = Booking.objects.get(booking_id=booking_id)
-
-                if booking.customer.customer_name != customer_name:
-                    messages.error(request, "Customer name does not match the booking.")
-                    return render(request, 'cancel_booking.html', {'form': form})
+                booking = get_object_or_404(Booking, booking_id=booking_id)
+                
+                
+                if booking.customer.user != request.user:
+                    messages.error(request, "You don't have permission to cancel this booking.")
+                    return redirect('display_taxi_details')
 
                 taxi = booking.taxi
                 fare_amount = booking.fare_amount
@@ -393,7 +399,7 @@ def cancel_booking(request):
                     taxi.location_index = 0
                     taxi.save()
 
-                messages.success(request, f"Booking (ID: {booking_id}) for {customer_name} has been cancelled successfully.")
+                messages.success(request, f"Booking (ID: {booking_id}) has been cancelled successfully.")
                 return redirect('display_taxi_details')
 
             except Booking.DoesNotExist:
@@ -401,14 +407,18 @@ def cancel_booking(request):
                 return render(request, 'cancel_booking.html', {'form': form})
     else:
         form = CancelBookingForm()
-        
 
     return render(request, 'cancel_booking.html', {'form': form})
 
 @login_required
 def view_customer_trips(request, customer_id):
-    customer_bookings = Booking.objects.filter(customer_id=customer_id)
-    return render(request, 'customer_trips.html', {'customer_bookings': customer_bookings})
+    
+    if request.user.is_superuser or (hasattr(request.user, 'customer') and request.user.customer.customer_id == customer_id):
+        customer_bookings = Booking.objects.filter(customer_id=customer_id)
+        return render(request, 'customer_trips.html', {'customer_bookings': customer_bookings})
+    else:
+        messages.error(request, "You don't have permission to view these trips.")
+        return redirect('display_taxi_details')
 
 @login_required
 def view_trips(request):
@@ -445,8 +455,17 @@ def register(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
-            form.save()
+            user = form.save()
             username = form.cleaned_data.get('username')
+            group = form.cleaned_data.get('group')
+
+            
+            group.user_set.add(user)
+            
+            
+            if group.name == 'Customer':
+                Customer.objects.create(user=user, customer_name=username)
+            
             messages.success(request, f'Account created for {username}. You can now log in.')
             return redirect('login')
     else:
@@ -455,7 +474,7 @@ def register(request):
 
 
 @login_required
-@driver_group_required
+@driver_required
 def driver_dashboard(request):
     
     bookings = Booking.objects.all().order_by('-booking_date', '-booking_time')
@@ -470,8 +489,12 @@ def driver_dashboard(request):
 def is_admin(user):
     return user.is_superuser
 
-@user_passes_test(is_admin)
+@admin_required
 def user_group_list(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('login')
+
     users = User.objects.all()
     user_groups = {user: user.groups.all() for user in users}
 

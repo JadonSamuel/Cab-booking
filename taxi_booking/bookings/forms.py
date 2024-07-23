@@ -1,7 +1,7 @@
 from django import forms
 from .models import Booking
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User,Group,Permission
+from django.contrib.auth.models import User,Group
 
 
 class BookingForm(forms.ModelForm):
@@ -53,10 +53,9 @@ class TimeInputForm(forms.Form):
     )
 
 class UserRegistrationForm(UserCreationForm):
-    groups = forms.ModelMultipleChoiceField(queryset=Group.objects.all(), required=False)
-    user_permissions = forms.ModelMultipleChoiceField(queryset=Permission.objects.all(), required=False)
-    email = forms.EmailField(required=True)
+    email = forms.EmailField()
+    group = forms.ModelChoiceField(queryset=Group.objects.all(), required=True, label="Role")
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password1', 'password2')
+        fields = ['username', 'email', 'password1', 'password2','group']

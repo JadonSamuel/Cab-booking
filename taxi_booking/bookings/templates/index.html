@@ -1,19 +1,134 @@
-<title>Taxi Booking Application</title>
-{% load static %}
-<link rel="stylesheet" href="{% static 'styles.css' %}">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi Booking Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+        }
+        .navbar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: space-around;
+        }
+        .navbar ul li {
+            flex: 1;
+        }
+        .navbar ul li a {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+        .navbar ul li a:hover {
+            background-color: #575757;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .cta-buttons {
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .cta-buttons .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            color: white;
+            background-color: #007BFF;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            flex: 1;
+        }
+        .cta-buttons .button:hover {
+            background-color: #0056b3;
+        }
+        .info-section {
+            background-color: #f0f0f0;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
 <body>
-    <div class="container">
-        <h1>Taxi Booking Application</h1>
-        <p>if you want to book tickets</p>
-        <a href="{% url 'book_taxi' %}" class="alink">Click here to book</a>
-        <p>Already a user,</p>
-        <a href="{% url 'display_taxi_details' %}" class="alink">Click here to view Bookings</a>
-        <p>View Trips,</p>
-        <a href="{% url 'view_trips' %}" class="alink">Click here to view Trips</a>
-        
-       
+    <div class="navbar">
+        <ul>
+            <li><a href="{% url 'index' %}">Home</a></li>
+            <li><a href="{% url 'book_taxi' %}">Book a Taxi</a></li>
+            <li><a href="{% url 'display_taxi_details' %}">View Bookings</a></li>
+            <li><a href="{% url 'view_trips' %}">View Trips</a></li>
+            <li><a href="{% url 'login' %}">Login</a></li>
+            <li><a href="{% url 'register' %}">Register</a></li>
+        </ul>
     </div>
+
+    <div class="container">
+       
+        <main>
+            <h1>Welcome to the Taxi Booking Application</h1>
+            <p>Your reliable service for booking taxis and managing your trips.</p>
+
+            <div class="cta-buttons">
+                <a href="{% url 'book_taxi' %}" class="button">Book a Taxi</a>
+                <a href="{% url 'display_taxi_details' %}" class="button">View Your Bookings</a>
+                <a href="{% url 'view_trips' %}" class="button">View Your Trips</a>
+            </div>
+        </main>
+
+        
+        <section class="info-section">
+            <h2>About Our Service</h2>
+            <p>Our taxi booking application offers a seamless experience for booking taxis, viewing your bookings, and managing your trips. Whether you are a new user or a returning customer, our application is designed to cater to all your needs.</p>
+
+            <h2>How to Use</h2>
+            <ol>
+                <li>Register for an account or log in if you already have one.</li>
+                <p></p>
+                <li>Book a taxi by providing your pickup and drop-off locations.</li>
+                <p></p>
+                <li>View your bookings and manage your trips easily from your dashboard.</li>
+                <p></p>
+            </ol>
+        </section>
+    </div>
+
+    
     <footer class="footer">
         <p>&copy; 2024 Taxi Booking Application. All rights reserved.</p>
     </footer>
 </body>
+</html>
