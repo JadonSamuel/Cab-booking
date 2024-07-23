@@ -1,13 +1,13 @@
-from django.shortcuts import render, redirect, get_object_or_404,HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Customer, Taxi, Booking
 from .forms import BookingForm,CancelBookingForm,ModifyBookingForm,TimeInputForm,UserRegistrationForm
 from datetime import timedelta
 from django.utils import timezone
-from django.contrib.auth.decorators import login_required,user_passes_test
+from django.contrib.auth.decorators import login_required
 from .decorators import driver_required,admin_required,customer_required
-from django.contrib.auth.models import User, Group
-from django.db.models import Q
+from django.contrib.auth.models import User
+
 
 
 points = ['A', 'B', 'C', 'D', 'E', 'F']
@@ -94,7 +94,6 @@ def book_taxi(request):
     if request.method == 'POST':
         form = BookingForm(request.POST)
         if form.is_valid():
-            customer_name = form.cleaned_data['customer']
             pickup_point = form.cleaned_data['pickup_point']
             drop_point = form.cleaned_data['drop_point']
             pickup_time = form.cleaned_data['pickup_time']
@@ -105,19 +104,18 @@ def book_taxi(request):
                 messages.error(request, "Invalid pickup or drop point. Please try again.")
                 return redirect('book_taxi')
 
-            customer, created = Customer.objects.get_or_create(customer_name=customer_name)
+            
+            customer = request.user.customer
 
             travel_time = calculate_travel_time(pickup_point, drop_point)
             drop_time = pickup_time + timedelta(hours=travel_time)
 
-            
             reassigned, old_taxi, new_taxi = try_reassign_booking(pickup_point, drop_point, pickup_time, drop_time, customer)
 
             if reassigned:
-                    messages.warning(request, f"Booking successful after reassignment. Taxi {old_taxi.taxi_id} was reassigned your trip. Taxi {new_taxi.taxi_id} took over its previous booking.")
-                    return redirect('display_taxi_details')
-            
-          
+                messages.warning(request, f"Booking successful after reassignment. Taxi {old_taxi.taxi_id} was reassigned your trip. Taxi {new_taxi.taxi_id} took over its previous booking.")
+                return redirect('display_taxi_details')
+
             available_taxi = find_available_taxi(pickup_point, drop_point, pickup_time, drop_time)
 
             if available_taxi:
@@ -136,12 +134,11 @@ def book_taxi(request):
                 if booking.pickup_time > timezone.now():
                     available_taxi.current_location = 'A'
                     available_taxi.location_index = 0
-                
                 else:
                     available_taxi.current_location = pickup_point
                     available_taxi.location_index = points.index(pickup_point)
-                    
-                available_taxi.earnings += fare 
+
+                available_taxi.earnings += fare
                 available_taxi.save()
                 messages.success(request, f"Taxi booked successfully! Booking ID: {booking.booking_id}")
                 return redirect('display_taxi_details')
@@ -153,6 +150,7 @@ def book_taxi(request):
         form = BookingForm()
 
     return render(request, 'book_taxi.html', {'form': form})
+
 
 def find_available_taxi(pickup_point, drop_point, pickup_time, drop_time):
     same_point_taxis = Taxi.objects.filter(current_location=pickup_point).order_by('earnings')
