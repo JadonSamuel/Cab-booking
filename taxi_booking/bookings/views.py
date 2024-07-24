@@ -456,15 +456,24 @@ def register(request):
             user = form.save()
             username = form.cleaned_data.get('username')
             group = form.cleaned_data.get('group')
-
             
             group.user_set.add(user)
             
-            
             if group.name == 'Customer':
                 Customer.objects.create(user=user, customer_name=username)
+                messages.success(request, f'Account created for {username}. You can now log in.')
+            elif group.name == 'Driver':
+                
+                available_taxi = Taxi.objects.filter(driver__isnull=True).first()
+                if available_taxi:
+                    available_taxi.driver = user
+                    available_taxi.save()
+                    messages.success(request, f'Account created for {username}. Assigned to Taxi {available_taxi.taxi_id}. You can now log in.')
+                else:
+                    messages.warning(request, f'Account created for {username}, but no taxis are available for assignment. You can now log in.')
+            else:
+                messages.success(request, f'Account created for {username}. You can now log in.')
             
-            messages.success(request, f'Account created for {username}. You can now log in.')
             return redirect('login')
     else:
         form = UserRegistrationForm()
@@ -475,10 +484,18 @@ def register(request):
 @driver_required
 def driver_dashboard(request):
     
-    bookings = Booking.objects.all().order_by('-booking_date', '-booking_time')
+    driver_taxi = request.user.assigned_taxi
+
+    if driver_taxi:
+        
+        bookings = Booking.objects.filter(taxi=driver_taxi).order_by('-booking_date', '-booking_time')
+    else:
+    
+        bookings = Booking.objects.none()
     
     context = {
         'bookings': bookings,
+        'taxi': driver_taxi,
         'user_role': 'Driver'
     }
     return render(request, 'driver_dashboard.html', context)

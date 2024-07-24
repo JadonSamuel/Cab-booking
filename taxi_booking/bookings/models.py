@@ -12,9 +12,13 @@ class Customer(models.Model):
 
 class Taxi(models.Model):
     taxi_id = models.AutoField(primary_key=True)
+    driver = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, related_name='assigned_taxi')
     current_location = models.CharField(max_length=1, choices=[('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D'), ('E', 'E'), ('F', 'F')],default='A')
     earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     location_index = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"Taxi {self.taxi_id}"
 
 
    
