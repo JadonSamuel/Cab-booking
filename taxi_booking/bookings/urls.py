@@ -9,7 +9,6 @@ urlpatterns = [
     path('cancel_booking/',views.cancel_booking,name='cancel_booking'),
     path('customer-trips/<int:customer_id>/', views.view_customer_trips, name='view_customer_trips'),
     path('modify_booking/', views.modify_booking, name='modify_booking'),
-    path('view_trips/', views.view_trips,name='view_trips'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='logout.html'), name='logout'),
     path('register/', views.register, name='register'),

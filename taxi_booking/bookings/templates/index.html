@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {% load custom_tags %}
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Taxi Booking Application</title>
@@ -82,33 +84,123 @@
             bottom: 0;
             width: 100%;
         }
+        .messages {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: auto;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+.messages li {
+    list-style: none;
+    margin: 5px 0;
+    padding: 10px;
+    border-radius: 5px;
+    color: #fff;
+    opacity: 0.9;
+    animation: fade-in-out 5s forwards;
+}
+
+.messages li.success {
+    background-color: #4CAF50; 
+}
+
+.messages li.error {
+    background-color: #F44336;
+}
+
+.messages li.warning {
+    background-color: #0772ff;
+}
+
+   .messages li.info {
+    background-color: #010408;
+   }
+   @keyframes fade-in-out {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    80% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
     </style>
 </head>
 <body>
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                {{ message }}
+            </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
     <div class="navbar">
         <ul>
             <li><a href="{% url 'index' %}">Home</a></li>
-            <li><a href="{% url 'book_taxi' %}">Book a Taxi</a></li>
-            <li><a href="{% url 'display_taxi_details' %}">View Bookings</a></li>
-            <li><a href="{% url 'view_trips' %}">View Trips</a></li>
-            <li><a href="{% url 'login' %}">Login</a></li>
-            <li><a href="{% url 'register' %}">Register</a></li>
+            {% if user.is_authenticated %}
+                {% if user.is_superuser %}
+                    
+                    <li><a href="{% url 'display_taxi_details' %}">View Bookings</a></li>
+                    <li><a href="{% url 'user_group_list' %}">Users</a></li>
+                {% elif user|has_group:"Customer" %}
+                    <li><a href="{% url 'book_taxi' %}">Book a Taxi</a></li>
+                    <li><a href="{% url 'display_taxi_details' %}">View Bookings</a></li>
+                    
+                    
+                {% elif user|has_group:"Driver" %}
+                    <li><a href="{% url 'driver_dashboard' %}">Drivers Dashboard</a></li>
+                    
+                    
+                {% endif %}
+                <li><a href="{% url 'logout' %}">Logout</a></li>
+            {% else %}
+                <li><a href="{% url 'login' %}">Login</a></li>
+                <li><a href="{% url 'register' %}">Register</a></li>
+            {% endif %}
         </ul>
     </div>
+    
+    
 
     <div class="container">
-       
         <main>
             <h1>Welcome to the Taxi Booking Application</h1>
             <p>Your reliable service for booking taxis and managing your trips.</p>
-
-            <div class="cta-buttons">
-                <a href="{% url 'book_taxi' %}" class="button">Book a Taxi</a>
-                <a href="{% url 'display_taxi_details' %}" class="button">View Your Bookings</a>
-                <a href="{% url 'view_trips' %}" class="button">View Your Trips</a>
-            </div>
+    
+            {% if user.is_authenticated %}
+                <div class="cta-buttons">
+                   
+                    {% if user|has_group:"Customer" %}
+                        <a href="{% url 'book_taxi' %}" class="button">Book a Taxi</a>
+                    {% endif %}
+                    {% if user.is_superuser or user|has_group:"Customer" %}
+                        <a href="{% url 'display_taxi_details' %}" class="button">View Your Bookings</a>
+                    {% endif %}
+                    {% if user|has_group:"Driver" %}
+                        <a href="{% url 'driver_dashboard' %}" class="button">View Drivers Dashboard</a>
+                    {% endif %}
+                    
+                </div>
+            {% else %}
+                <p>Please <a href="{% url 'login' %}">Login</a> or <a href="{% url 'register' %}">Register</a> to book a taxi or view your bookings.</p>
+            {% endif %}
         </main>
-
+    </div>
+    
         
         <section class="info-section">
             <h2>About Our Service</h2>

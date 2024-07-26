@@ -2,14 +2,14 @@ from django import forms
 from .models import Booking
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User,Group
+from django.utils import timezone
 
 
 class BookingForm(forms.ModelForm):
-    
     class Meta:
         model = Booking
         fields = ['pickup_point', 'drop_point', 'pickup_time']
-    
+
     pickup_time = forms.DateTimeField(
         input_formats=['%Y-%m-%dT%H:%M'],
         widget=forms.DateTimeInput(
@@ -19,6 +19,8 @@ class BookingForm(forms.ModelForm):
             format='%Y-%m-%dT%H:%M'
         )
     )
+
+    
 
 class ModifyBookingForm(forms.Form):
     booking_id = forms.IntegerField()
@@ -34,22 +36,13 @@ class ModifyBookingForm(forms.Form):
         )
     )
 
+    
 
 class CancelBookingForm(forms.Form):
     booking_id = forms.IntegerField(label="Booking ID")
     customer_name = forms.CharField(max_length=255, label="Customer Name")
 
 
-class TimeInputForm(forms.Form):
-    specific_time = forms.DateTimeField(
-        input_formats=['%Y-%m-%dT%H:%M'],
-        widget=forms.DateTimeInput(
-            attrs={
-                'type': 'datetime-local',
-                'class': 'form-control'},
-            format='%Y-%m-%dT%H:%M'
-        )
-    )
 
 class UserRegistrationForm(UserCreationForm):
     email = forms.EmailField()
