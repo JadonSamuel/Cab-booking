@@ -156,6 +156,8 @@
                     
                     <li><a href="{% url 'display_taxi_details' %}">View Bookings</a></li>
                     <li><a href="{% url 'user_group_list' %}">Users</a></li>
+                    <li><a href="{% url 'taxis' %}">View Taxis</a></li>
+
                 {% elif user|has_group:"Customer" %}
                     <li><a href="{% url 'book_taxi' %}">Book a Taxi</a></li>
                     <li><a href="{% url 'display_taxi_details' %}">View Bookings</a></li>

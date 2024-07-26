@@ -10,7 +10,7 @@
 
     {% if bookings %}
        {% if is_customer %}
-       <p class="total-spent">Total amount spent: ₹{{ total_spent|floatformat:2 }}</p>
+       <p class="total-spent">Total amount spent: ₹{{total_spent}}</p>
        {% endif %}
         <form method="post" action="{% url 'display_taxi_details' %}">
             {% csrf_token %}

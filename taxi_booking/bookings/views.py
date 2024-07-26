@@ -521,3 +521,22 @@ def user_group_list(request):
         'user_groups': user_groups
     }
     return render(request, 'user_group_list.html', context)
+
+@admin_required
+def display_taxis(request):
+
+    if not request.user.is_superuser:
+        messages.error(request,'You do not have permission to view this page.')
+        return redirect('login')
+    
+    taxis = Taxi.objects.all().order_by('taxi_id')
+
+    context = {
+        'taxis': taxis,
+        'user_role': 'Admin'
+    }
+
+    return render(request, 'total_taxis.html',context)
+
+
+    

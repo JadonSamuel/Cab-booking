@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Taxi details{% endblock %}
+
+{% block content %}
+<body>
+    <header>
+        <h1>Welcome, {{ user_role }}!</h1>
+        
+        
+    
+    <main>
+        <h2>Taxi earnings so far!</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Taxi ID</th>
+                    <th>Earnings</th>
+                    <th>Driver id</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for taxi in taxis %}
+                <tr>
+                    <td>{{ taxi.taxi_id }}</td>
+                    <td>{{ taxi.earnings }}</td>
+                    <td>{{ taxi.driver_id }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+</body>
+{% endblock %}
