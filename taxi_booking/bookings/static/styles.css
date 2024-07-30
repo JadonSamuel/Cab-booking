@@ -678,3 +678,18 @@ p.no-trips-message {
     outline: none; /* Remove default focus outline */
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Custom focus shadow */
 }
+
+  .total-spent {
+
+    display: inline-block;
+    padding: 5px 10px;
+    color: rgb(29, 12, 12);
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: bold;
+    
+
+
+
+
+}

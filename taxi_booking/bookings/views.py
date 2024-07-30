@@ -32,7 +32,7 @@ def calculate_amount(pickup_point, drop_point):
     return fare
 
 def calculate_travel_time(point1, point2):
-    distance = calculate_distance(point1, point2)
+    distance = calculate_distance(point1, point2) * 15
     return distance
 
 def get_distance(point1, point2):
@@ -43,6 +43,7 @@ def get_distance(point1, point2):
 
 
 def is_taxi_available(taxi, pickup_point, drop_point, pickup_time, drop_time):
+    
     conflicting_bookings = Booking.objects.filter(
         taxi=taxi,
         pickup_time__lt=drop_time,
@@ -51,24 +52,28 @@ def is_taxi_available(taxi, pickup_point, drop_point, pickup_time, drop_time):
     if conflicting_bookings.exists():
         return False
 
+    
     last_booking = Booking.objects.filter(
         taxi=taxi,
         drop_time__lte=pickup_time
     ).order_by('-drop_time').first()
 
     if last_booking:
+        
         travel_time_to_pickup = calculate_travel_time(last_booking.drop_point, pickup_point)
-        if last_booking.drop_time + timedelta(hours=travel_time_to_pickup) > pickup_time:
+        if last_booking.drop_time + timedelta(minutes=travel_time_to_pickup) > pickup_time:
             return False
 
+    
     next_booking = Booking.objects.filter(
         taxi=taxi,
         pickup_time__gte=drop_time
     ).order_by('pickup_time').first()
 
     if next_booking:
+        
         travel_time_to_next = calculate_travel_time(drop_point, next_booking.pickup_point)
-        if drop_time + timedelta(hours=travel_time_to_next) > next_booking.pickup_time:
+        if drop_time + timedelta(minutes=travel_time_to_next) > next_booking.pickup_time:
             return False
 
     return True
@@ -120,7 +125,7 @@ def book_taxi(request):
             customer = request.user.customer
 
             travel_time = calculate_travel_time(pickup_point, drop_point)
-            drop_time = pickup_time + timedelta(hours=travel_time)
+            drop_time = pickup_time + timedelta(minutes=travel_time)
 
             
 
@@ -177,71 +182,12 @@ def find_available_taxi(pickup_point, drop_point, pickup_time, drop_time):
 
     return None
 
-
-"""
-def try_reassign_booking(pickup_point, drop_point, pickup_time, drop_time, customer):
-    potential_bookings = Booking.objects.filter(pickup_time__gt=pickup_time).order_by('pickup_time')
-
-    for booking in potential_bookings:
-        for other_taxi in Taxi.objects.exclude(taxi_id=booking.taxi.taxi_id):
-            if is_taxi_available(other_taxi, booking.pickup_point, booking.drop_point, booking.pickup_time, booking.drop_time):
-                if is_taxi_available(booking.taxi, pickup_point, drop_point, pickup_time, drop_time):
-                    old_taxi = booking.taxi
-                    
-                    existing_fare = booking.fare_amount
-                    new_fare = calculate_amount(pickup_point, drop_point)
-
-                    
-                    booking.taxi = other_taxi
-                    booking.save()
-
-                    
-                    other_taxi.earnings += existing_fare
-                    other_taxi.current_location = booking.drop_point
-                    other_taxi.location_index = points.index(booking.drop_point)
-                    other_taxi.save()
-
-                    
-                    old_taxi.earnings -= existing_fare  
-                    old_taxi.earnings += new_fare  
-
-                    
-                    new_booking = Booking.objects.create(
-                        taxi=old_taxi,
-                        customer=customer,
-                        pickup_point=pickup_point,
-                        drop_point=drop_point,
-                        pickup_time=pickup_time,
-                        drop_time=drop_time,
-                        fare_amount=new_fare,
-                        booking_date=timezone.now().date(),
-                        booking_time=timezone.now()
-                    )
-
-                    
-                    remaining_bookings = Booking.objects.filter(taxi=old_taxi, pickup_time__gt=drop_time).order_by('pickup_time')
-                    if remaining_bookings.exists():
-                        next_booking = remaining_bookings.first()
-                        old_taxi.current_location = next_booking.pickup_point
-                        old_taxi.location_index = points.index(next_booking.pickup_point)
-                    else:
-                        old_taxi.current_location = drop_point
-                        old_taxi.location_index = points.index(drop_point)
-                    
-                    old_taxi.save()
-
-                    return True, old_taxi, other_taxi
-
-    return False, None, None
-"""
-
 @login_required
 def display_bookings(request):
     
     if request.user.groups.filter(name='Driver').exists():
         return redirect('driver_dashboard')
 
-    
     if hasattr(request.user, 'customer'):
         bookings = Booking.objects.filter(customer=request.user.customer).order_by('-booking_date', '-booking_time')
         total_spent = sum(booking.fare_amount for booking in bookings)
@@ -388,6 +334,13 @@ def modify_booking(request):
 
     return render(request, 'modify_booking.html', {'form': form, 'booking': booking})
 
+
+def can_cancel_booking(booking_pickup_time, current_time):
+    if booking_pickup_time <= current_time:
+        return False, "Cancellation not allowed: Your pickup time has already passed."
+    return True, "You can proceed with cancellation."
+
+
 @login_required
 @customer_required
 def cancel_booking(request):
@@ -399,10 +352,20 @@ def cancel_booking(request):
             try:
                 booking = get_object_or_404(Booking, booking_id=booking_id)
 
+                
                 if booking.customer.user != request.user:
                     messages.error(request, "You don't have permission to cancel this booking.")
                     return redirect('display_taxi_details')
 
+                
+                current_time = timezone.now()
+                can_cancel, message = can_cancel_booking(booking.pickup_time, current_time)
+                
+                if not can_cancel:
+                    messages.error(request, message)
+                    return redirect('display_taxi_details')
+
+                
                 taxi = booking.taxi
                 fare_amount = booking.fare_amount
 
@@ -411,19 +374,16 @@ def cancel_booking(request):
 
                 
                 taxi.earnings = max(0, taxi.earnings - fare_amount)
-                taxi.save()
-
-                
                 remaining_bookings = Booking.objects.filter(taxi=taxi).order_by('pickup_time')
+
                 if remaining_bookings.exists():
-                    
                     last_booking = remaining_bookings.last()
                     taxi.current_location = last_booking.drop_point
-                    taxi.location_index =  points.index(last_booking.drop_point)
+                    taxi.location_index = points.index(last_booking.drop_point)
                 else:
-                    
                     taxi.current_location = 'A'
                     taxi.location_index = 0
+
                 taxi.save()
 
                 messages.success(request, f"Booking (ID: {booking_id}) has been cancelled successfully.")
@@ -436,6 +396,7 @@ def cancel_booking(request):
         form = CancelBookingForm()
 
     return render(request, 'cancel_booking.html', {'form': form})
+
 
 
 @login_required

@@ -2,6 +2,7 @@ from django import forms
 from .models import Booking
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User,Group
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 
@@ -20,6 +21,16 @@ class BookingForm(forms.ModelForm):
         )
     )
 
+    def clean_pickup_time(self):
+        pickup_time = self.cleaned_data.get('pickup_time')
+        current_time = timezone.now()
+        print(f"pickup_time: {pickup_time}, current_time: {current_time}")
+
+        if pickup_time and pickup_time < current_time:
+            raise ValidationError("The pickup time cannot be in the past. Please select a valid future date and time.")
+        
+        return pickup_time
+
     
 
 class ModifyBookingForm(forms.Form):
@@ -35,6 +46,16 @@ class ModifyBookingForm(forms.Form):
             format='%Y-%m-%dT%H:%M'
         )
     )
+    
+    def clean_pickup_time(self):
+        pickup_time = self.cleaned_data.get('pickup_time')
+        current_time = timezone.now()
+        print(f"pickup_time: {pickup_time}, current_time: {current_time}")
+
+        if pickup_time and pickup_time < current_time:
+            raise ValidationError("The pickup time cannot be in the past. Please select a valid future date and time.")
+        
+        return pickup_time
 
     
 
