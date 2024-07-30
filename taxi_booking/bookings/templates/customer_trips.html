@@ -10,6 +10,11 @@
     </div>
     {% for booking in customer_bookings %}
     <div class="trip">
+        <!-- Check if booking is completed -->
+        {% if booking.drop_time < now %}
+            <div class="completed-label">Completed</div>
+        {% endif %}
+        
         <p><strong>Booking ID:</strong> {{ booking.booking_id }}</p>
         <p><strong>Customer Name:</strong> {{ booking.customer.customer_name }}</p>
         <p><strong>Taxi ID:</strong> {{ booking.taxi.taxi_id }}</p>
@@ -20,10 +25,12 @@
         <p><strong>Fare:</strong> ₹{{ booking.fare_amount }}</p>
         <p><strong>Booking Date:</strong> {{ booking.booking_date|date:"Y-m-d" }}</p>
         {% if user.is_superuser or user.customer == booking.customer %}
-        <div class="booking-actions">
-            <a href="{% url 'cancel_booking' %}?booking_id={{ booking.booking_id }}" class="cancel-btn">Cancel Booking</a>
-            <a href="{% url 'modify_booking' %}?booking_id={{ booking.booking_id }}" class="modify-btn">Modify Booking</a>
-        </div>
+            {% if booking.pickup_time > now %}
+                <div class="booking-actions">
+                    <a href="{% url 'cancel_booking' %}?booking_id={{ booking.booking_id }}" class="cancel-btn">Cancel Booking</a>
+                    <a href="{% url 'modify_booking' %}?booking_id={{ booking.booking_id }}" class="modify-btn">Modify Booking</a>
+                </div>
+            {% endif %}
         {% endif %}
     </div>
     {% endfor %}

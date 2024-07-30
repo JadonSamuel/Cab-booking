@@ -1,3 +1,4 @@
+import threading
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Customer, Taxi, Booking
@@ -102,6 +103,29 @@ def is_taxi_available_for_modification(taxi, original_booking, new_pickup_point,
 
     return True
 
+
+def update_taxi_location(booking_id):
+    try:
+        booking = Booking.objects.get(pk=booking_id)
+        taxi = booking.taxi
+        
+        
+        wait_time = (booking.drop_time - timezone.now()).total_seconds()
+        if wait_time > 0:
+            threading.Timer(wait_time, lambda: perform_location_update(taxi, booking.drop_point)).start()
+    except Booking.DoesNotExist:
+        print(f"Booking with id {booking_id} not found.")
+    except Exception as e:
+        print(f"An error occurred while updating taxi location: {str(e)}")
+
+
+def perform_location_update(taxi, new_location):
+    taxi.current_location = new_location
+    taxi.location_index = points.index(new_location)
+    taxi.save()
+    print(f"Taxi {taxi.taxi_id} location updated to {new_location}")
+
+
 @login_required
 @customer_required
 def book_taxi(request):
@@ -144,8 +168,7 @@ def book_taxi(request):
                     booking_date=booking_date,
                     booking_time=booking_time
                 )
-                available_taxi.current_location = drop_point
-                available_taxi.location_index = points.index(drop_point)
+                update_taxi_location(booking.booking_id)
 
                 available_taxi.earnings += fare
                 available_taxi.save()
@@ -335,12 +358,6 @@ def modify_booking(request):
     return render(request, 'modify_booking.html', {'form': form, 'booking': booking})
 
 
-def can_cancel_booking(booking_pickup_time, current_time):
-    if booking_pickup_time <= current_time:
-        return False, "Cancellation not allowed: Your pickup time has already passed."
-    return True, "You can proceed with cancellation."
-
-
 @login_required
 @customer_required
 def cancel_booking(request):
@@ -352,27 +369,20 @@ def cancel_booking(request):
             try:
                 booking = get_object_or_404(Booking, booking_id=booking_id)
 
-                
                 if booking.customer.user != request.user:
                     messages.error(request, "You don't have permission to cancel this booking.")
                     return redirect('display_taxi_details')
 
-                
                 current_time = timezone.now()
-                can_cancel, message = can_cancel_booking(booking.pickup_time, current_time)
-                
-                if not can_cancel:
-                    messages.error(request, message)
+                if booking.pickup_time <= current_time:
+                    messages.error(request, "Cancellation not allowed: Your pickup time has already passed.")
                     return redirect('display_taxi_details')
 
-                
                 taxi = booking.taxi
                 fare_amount = booking.fare_amount
 
-                
                 booking.delete()
 
-                
                 taxi.earnings = max(0, taxi.earnings - fare_amount)
                 remaining_bookings = Booking.objects.filter(taxi=taxi).order_by('pickup_time')
 
@@ -401,10 +411,14 @@ def cancel_booking(request):
 
 @login_required
 def view_customer_trips(request, customer_id):
-    
     if request.user.is_superuser or (hasattr(request.user, 'customer') and request.user.customer.customer_id == customer_id):
         customer_bookings = Booking.objects.filter(customer_id=customer_id)
-        return render(request, 'customer_trips.html', {'customer_bookings': customer_bookings})
+        now = timezone.now() 
+        context = {
+            'customer_bookings': customer_bookings,
+            'now': now
+        }
+        return render(request, 'customer_trips.html', context)
     else:
         messages.error(request, "You don't have permission to view these trips.")
         return redirect('display_taxi_details')

@@ -349,6 +349,26 @@ p {
     margin-bottom: 10px;
 }
 
+.completed-label {
+    position: absolute; /* Position it at the top right corner */
+    top: 10px; /* Adjust as needed */
+    right: 10px; /* Adjust as needed */
+    background-color: rgb(28, 16, 16); /* Or any color you prefer */
+    color: white;
+    padding: 5px;
+    font-weight: bold;
+    border-radius: 3px;
+}
+.trip {
+    position: relative; /* Make sure the container has relative positioning */
+    padding: 20px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+
+
 
 .alink{
     display: inline-block;
