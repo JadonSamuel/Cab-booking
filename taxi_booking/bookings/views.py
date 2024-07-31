@@ -1,4 +1,6 @@
 import threading
+from threading import Timer
+from threading import Lock
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Customer, Taxi, Booking
@@ -34,8 +36,9 @@ def calculate_amount(pickup_point, drop_point):
     return fare
 
 def calculate_travel_time(point1, point2):
-    distance = calculate_distance(point1, point2) * 15
-    return distance
+    distance_units = calculate_distance(point1, point2)
+    travel_time_minutes = distance_units * 15
+    return travel_time_minutes
 
 def get_distance(point1, point2):
     distance = calculate_distance(point1, point2)
@@ -81,7 +84,6 @@ def is_taxi_available(taxi, pickup_point, drop_point, pickup_time, drop_time):
     return True
 
 def is_taxi_available_for_modification(taxi, original_booking, new_pickup_point, new_drop_point, new_pickup_time, new_drop_time):
-
     conflicting_bookings = Booking.objects.filter(
         taxi=taxi,
         pickup_time__lt=new_drop_time,
@@ -91,7 +93,6 @@ def is_taxi_available_for_modification(taxi, original_booking, new_pickup_point,
     if conflicting_bookings.exists():
         return False
 
-   
     next_booking = Booking.objects.filter(
         taxi=taxi,
         pickup_time__gte=new_drop_time
@@ -99,11 +100,12 @@ def is_taxi_available_for_modification(taxi, original_booking, new_pickup_point,
 
     if next_booking:
         travel_time_to_next = calculate_travel_time(new_drop_point, next_booking.pickup_point)
-        if new_drop_time + timedelta(hours=travel_time_to_next) > next_booking.pickup_time:
+        if new_drop_time + timedelta(minutes=travel_time_to_next) > next_booking.pickup_time:
             return False
 
     return True
 
+taxi_locks = {}
 
 def update_taxi_location(booking_id):
     try:
@@ -111,20 +113,34 @@ def update_taxi_location(booking_id):
         taxi = booking.taxi
         
         
+        if taxi.taxi_id not in taxi_locks:
+            taxi_locks[taxi.taxi_id] = Lock()
+        
         wait_time = (booking.drop_time - timezone.now()).total_seconds()
         if wait_time > 0:
-            threading.Timer(wait_time, lambda: perform_location_update(taxi, booking.drop_point)).start()
+            threading.Timer(wait_time, lambda: perform_location_update(taxi.taxi_id, booking.drop_point)).start()
     except Booking.DoesNotExist:
         print(f"Booking with id {booking_id} not found.")
     except Exception as e:
         print(f"An error occurred while updating taxi location: {str(e)}")
 
 
-def perform_location_update(taxi, new_location):
-    taxi.current_location = new_location
-    taxi.location_index = points.index(new_location)
-    taxi.save()
-    print(f"Taxi {taxi.taxi_id} location updated to {new_location}")
+def perform_location_update(taxi_id, new_location):
+    try:
+        lock = taxi_locks.get(taxi_id)
+        if lock:
+            with lock:  
+                taxi = Taxi.objects.get(pk=taxi_id)
+                taxi.current_location = new_location
+                taxi.location_index = points.index(new_location)
+                taxi.save()
+                print(f"Taxi {taxi.taxi_id} location updated to {new_location}")
+        else:
+            print(f"No lock found for taxi {taxi_id}")
+    except Taxi.DoesNotExist:
+        print(f"Taxi with id {taxi_id} not found.")
+    except Exception as e:
+        print(f"An error occurred while performing location update: {str(e)}")
 
 
 @login_required
@@ -273,8 +289,8 @@ def modify_booking(request):
                 messages.error(request, "Invalid pickup or drop point. Please try again.")
                 return render(request, 'modify_booking.html', {'form': form, 'booking': booking})
 
-            travel_points = abs(points.index(new_pickup_point) - points.index(new_drop_point))
-            new_drop_time = new_pickup_time + timezone.timedelta(hours=travel_points)
+            travel_time = calculate_travel_time(new_pickup_point, new_drop_point)
+            new_drop_time = new_pickup_time + timedelta(minutes=travel_time)
 
             try:
                 original_taxi = booking.taxi
@@ -290,8 +306,7 @@ def modify_booking(request):
                     booking.fare_amount = fare
                     booking.save()
 
-                    original_taxi.current_location = new_drop_point
-                    original_taxi.location_index = points.index(new_drop_point)
+                    update_taxi_location(booking.booking_id)
 
                     original_taxi.earnings = original_taxi.earnings - original_fare + fare
                     original_taxi.save()
@@ -304,14 +319,9 @@ def modify_booking(request):
                         fare = calculate_amount(new_pickup_point, new_drop_point)
 
                         
-                        subsequent_bookings = Booking.objects.filter(taxi=original_taxi, pickup_time__gt=booking.drop_time).order_by('pickup_time')
-                        if subsequent_bookings.exists():
-                            next_booking = subsequent_bookings.first()
-                            original_taxi.current_location = next_booking.drop_point
-                            original_taxi.location_index = points.index(next_booking.drop_point)
-                        else:
-                            original_taxi.current_location = booking.drop_point
-                            original_taxi.location_index = points.index(booking.drop_point)
+                        for timer in threading.enumerate():
+                            if isinstance(timer, Timer) and timer.function.__name__ == 'perform_location_update' and timer.args[0] == original_taxi.taxi_id:
+                                timer.cancel()
                         
                         original_taxi.earnings -= original_fare
                         original_taxi.save()
@@ -326,14 +336,7 @@ def modify_booking(request):
                         booking.save()
 
                         
-                        subsequent_bookings = Booking.objects.filter(taxi=available_taxi, pickup_time__gt=new_drop_time).order_by('pickup_time')
-                        if subsequent_bookings.exists():
-                            next_booking = subsequent_bookings.first()
-                            available_taxi.current_location = next_booking.pickup_point
-                            available_taxi.location_index = points.index(next_booking.pickup_point)
-                        else:
-                            available_taxi.current_location = new_drop_point
-                            available_taxi.location_index = points.index(new_drop_point)
+                        update_taxi_location(booking.booking_id)
                         
                         available_taxi.earnings += fare
                         available_taxi.save()
@@ -382,11 +385,22 @@ def cancel_booking(request):
                 taxi = booking.taxi
                 fare_amount = booking.fare_amount
 
+                
+                for timer in threading.enumerate():
+                    if isinstance(timer, Timer) and timer.function.__name__ == 'perform_location_update' and timer.args[0] == taxi.taxi_id:
+                        timer.cancel()
+
                 booking.delete()
 
+                
                 taxi.earnings = max(0, taxi.earnings - fare_amount)
-                remaining_bookings = Booking.objects.filter(taxi=taxi).order_by('pickup_time')
 
+                
+                remaining_bookings = Booking.objects.filter(taxi=taxi, pickup_time__gt=current_time).order_by('pickup_time')
+                for remaining_booking in remaining_bookings:
+                    update_taxi_location(remaining_booking.booking_id)
+
+                
                 if remaining_bookings.exists():
                     last_booking = remaining_bookings.last()
                     taxi.current_location = last_booking.drop_point
