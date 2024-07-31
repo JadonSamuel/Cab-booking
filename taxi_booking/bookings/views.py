@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from .decorators import driver_required,admin_required,customer_required
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 
 points = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -458,25 +459,25 @@ def register(request):
 @login_required
 @driver_required
 def driver_dashboard(request):
-    
-    driver_taxi = request.user.assigned_taxi
+    try:
+        driver_taxi = request.user.assigned_taxi
+    except ObjectDoesNotExist:
+        driver_taxi = None
 
-    if driver_taxi:
-        
-        bookings = Booking.objects.filter(taxi=driver_taxi).order_by('-booking_date', '-booking_time')
-        total_spent = sum(booking.fare_amount for booking in bookings)
-    else:
-    
-        bookings = Booking.objects.none()
-        total_spent = 0
-    
+    if not driver_taxi:
+        messages.error(request, "The page is not accessible because you are not assigned to any taxi.")
+        return redirect('index')  
+
+    bookings = Booking.objects.filter(taxi=driver_taxi).order_by('-booking_date', '-booking_time')
+    total_spent = sum(booking.fare_amount for booking in bookings)
+
     context = {
         'bookings': bookings,
         'taxi': driver_taxi,
         'user_role': 'Driver',
         'total_spent': total_spent
-        
     }
+
     return render(request, 'driver_dashboard.html', context)
 
 

@@ -164,9 +164,11 @@
                     
                     
                 {% elif user|has_group:"Driver" %}
-                    <li><a href="{% url 'driver_dashboard' %}">Drivers Dashboard</a></li>
-                    
-                    
+                    {% if user.assigned_taxi %}
+                        <li><a href="{% url 'driver_dashboard' %}">Drivers Dashboard</a></li>
+                    {% else %}
+                        <li><a href="{% url 'index' %}">Home</a></li>
+                    {% endif %}
                 {% endif %}
                 <li><a href="{% url 'logout' %}">Logout</a></li>
             {% else %}
@@ -193,7 +195,11 @@
                         <a href="{% url 'display_taxi_details' %}" class="button">View Your Bookings</a>
                     {% endif %}
                     {% if user|has_group:"Driver" %}
-                        <a href="{% url 'driver_dashboard' %}" class="button">View Drivers Dashboard</a>
+                        {% if user.assigned_taxi %}
+                           <a href="{% url 'driver_dashboard' %}" class="button">View Drivers Dashboard</a>
+                        {% else %}
+                           <p>You do not have an assigned taxi. Please contact the administrator.</p>
+                        {% endif %}
                     {% endif %}
                     
                 </div>
