@@ -123,13 +123,20 @@ USE_TZ = False
 
 STATIC_URL = '/static/'
 
+SITE_DOMAIN = 'localhost:8000'
+
+
+
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-email@gmail.com'
-EMAIL_HOST_PASSWORD = 'your-email-password'
+EMAIL_HOST_USER = 'b4a63e78a6deb5'
+EMAIL_HOST_PASSWORD = '1fdd801311d66b'
+
+
+
 
 LOGIN_REDIRECT_URL = 'index'  
 LOGOUT_REDIRECT_URL = 'index'  

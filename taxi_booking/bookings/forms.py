@@ -67,8 +67,15 @@ class CancelBookingForm(forms.Form):
 
 class UserRegistrationForm(UserCreationForm):
     email = forms.EmailField()
-    group = forms.ModelChoiceField(queryset=Group.objects.all(), required=True, label="Role")
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password1', 'password2','group']
+        fields = ['username', 'email', 'password1', 'password2']
+
+
+class CustomerRegistrationForm(UserCreationForm):
+    email = forms.EmailField()
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2']

@@ -4,13 +4,24 @@ from threading import Lock
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Customer, Taxi, Booking
-from .forms import BookingForm,CancelBookingForm,ModifyBookingForm,UserRegistrationForm
+from .forms import BookingForm,CancelBookingForm,ModifyBookingForm,UserRegistrationForm,CustomerRegistrationForm
 from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from .decorators import driver_required,admin_required,customer_required
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User,Group
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
+from django.contrib.sites.shortcuts import get_current_site
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import login
+from django.contrib.auth import get_user_model
+
 
 points = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -306,6 +317,10 @@ def modify_booking(request):
                     booking.fare_amount = fare
                     booking.save()
 
+                    for timer in threading.enumerate():
+                            if isinstance(timer, Timer) and timer.function.__name__ == 'perform_location_update' and timer.args[0] == original_taxi.taxi_id:
+                                timer.cancel()
+
                     update_taxi_location(booking.booking_id)
 
                     original_taxi.earnings = original_taxi.earnings - original_fare + fare
@@ -437,37 +452,99 @@ def view_customer_trips(request, customer_id):
     else:
         messages.error(request, "You don't have permission to view these trips.")
         return redirect('display_taxi_details')
+    
+
+def send_verification_email(user, request):
+    current_site = get_current_site(request)
+    protocol = 'https' if request.is_secure() else 'http'
+    subject = 'Activate Your Account'
+    message = render_to_string('account_activation_email.html', {
+        'user': user,
+        'domain': current_site.domain,
+        'protocol': protocol,
+        'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+        'token': default_token_generator.make_token(user),
+    })
+    email = EmailMessage(subject, message, to=[user.email])
+    email.content_subtype = 'html'
+    email.send()
+
+
+def activate(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save()
+
+        customer, created = Customer.objects.get_or_create(user=user, defaults={'customer_name': user.username})
+
+        login(request, user)
+        messages.success(request, 'Your account has been activated successfully.')
+        return redirect('login')
+    else:
+        messages.error(request, 'The activation link is invalid or has expired.')
+        return redirect('register')
 
 
 def register(request):
+    if request.method == 'POST':
+        form = CustomerRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_active = False
+            user.email = form.cleaned_data['email']
+            user.save()
+
+            Customer.objects.create(user=user, customer_name=form.cleaned_data['username'])
+
+            customer_group = Group.objects.get(name='Customer')
+            user.groups.add(customer_group)
+
+            send_verification_email(user, request)
+
+            messages.success(request, 'Please check your email to activate your account.')
+            return redirect('login')
+    else:
+        form = CustomerRegistrationForm()
+    return render(request, 'register.html', {'form': form})
+
+
+User = get_user_model()
+
+@admin_required
+def register_driver(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
             username = form.cleaned_data.get('username')
-            group = form.cleaned_data.get('group')
+
             
-            group.user_set.add(user)
+            driver_group = Group.objects.get(name='Driver')
+            driver_group.user_set.add(user)
+
             
-            if group.name == 'Customer':
-                Customer.objects.create(user=user, customer_name=username)
-                messages.success(request, f'Account created for {username}. You can now log in.')
-            elif group.name == 'Driver':
-                
-                available_taxi = Taxi.objects.filter(driver__isnull=True).first()
-                if available_taxi:
-                    available_taxi.driver = user
-                    available_taxi.save()
-                    messages.success(request, f'Account created for {username}. Assigned to Taxi {available_taxi.taxi_id}. You can now log in.')
-                else:
-                    messages.warning(request, f'Account created for {username}, but no taxis are available for assignment. You can now log in.')
+            available_taxi = Taxi.objects.filter(driver__isnull=True).first()
+            if available_taxi:
+                available_taxi.driver = user
+                available_taxi.save()
+                messages.success(request, f'Account created for {username}. Assigned to Taxi {available_taxi.taxi_id}. You can now log in.')
             else:
-                messages.success(request, f'Account created for {username}. You can now log in.')
-            
+                messages.warning(request, f'Account created for {username}, but no taxis are available for assignment. You can now log in.')
+
             return redirect('login')
     else:
         form = UserRegistrationForm()
-    return render(request, 'register.html', {'form': form})
+    
+    return render(request, 'register_driver.html', {'form': form})
+
+
+          
 
 
 @login_required

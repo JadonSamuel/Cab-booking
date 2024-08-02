@@ -153,16 +153,13 @@
             <li><a href="{% url 'index' %}">Home</a></li>
             {% if user.is_authenticated %}
                 {% if user.is_superuser %}
-                    
                     <li><a href="{% url 'display_taxi_details' %}">View Bookings</a></li>
                     <li><a href="{% url 'user_group_list' %}">Users</a></li>
                     <li><a href="{% url 'taxis' %}">View Taxis</a></li>
-
+                    <li><a href="{% url 'register-driver' %}">Register Drivers</a></li>
                 {% elif user|has_group:"Customer" %}
                     <li><a href="{% url 'book_taxi' %}">Book a Taxi</a></li>
                     <li><a href="{% url 'display_taxi_details' %}">View Bookings</a></li>
-                    
-                    
                 {% elif user|has_group:"Driver" %}
                     {% if user.assigned_taxi %}
                         <li><a href="{% url 'driver_dashboard' %}">Drivers Dashboard</a></li>
@@ -177,8 +174,6 @@
             {% endif %}
         </ul>
     </div>
-    
-    
 
     <div class="container">
         <main>
@@ -187,9 +182,9 @@
     
             {% if user.is_authenticated %}
                 <div class="cta-buttons">
-                   
                     {% if user|has_group:"Customer" %}
                         <a href="{% url 'book_taxi' %}" class="button">Book a Taxi</a>
+                        
                     {% endif %}
                     {% if user.is_superuser or user|has_group:"Customer" %}
                         <a href="{% url 'display_taxi_details' %}" class="button">View Your Bookings</a>
@@ -201,31 +196,27 @@
                            <p>You do not have an assigned taxi. Please contact the administrator.</p>
                         {% endif %}
                     {% endif %}
-                    
                 </div>
             {% else %}
-                <p>Please <a href="{% url 'login' %}">Login</a> or <a href="{% url 'register' %}">Register</a> to book a taxi or view your bookings.</p>
+                <p>Please <a href="{% url 'login' %}">Login</a> to book a taxi or view your bookings.</p>
             {% endif %}
         </main>
     </div>
     
-        
-        <section class="info-section">
-            <h2>About Our Service</h2>
-            <p>Our taxi booking application offers a seamless experience for booking taxis, viewing your bookings, and managing your trips. Whether you are a new user or a returning customer, our application is designed to cater to all your needs.</p>
+    <section class="info-section">
+        <h2>About Our Service</h2>
+        <p>Our taxi booking application offers a seamless experience for booking taxis, viewing your bookings, and managing your trips. Whether you are a new user or a returning customer, our application is designed to cater to all your needs.</p>
 
-            <h2>How to Use</h2>
-            <ol>
-                <li>Register for an account or log in if you already have one.</li>
-                <p></p>
-                <li>Book a taxi by providing your pickup and drop-off locations.</li>
-                <p></p>
-                <li>View your bookings and manage your trips easily from your dashboard.</li>
-                <p></p>
-            </ol>
-        </section>
-    </div>
-
+        <h2>How to Use</h2>
+        <ol>
+            <li>Register for an account or log in if you already have one.</li>
+            <p></p>
+            <li>Book a taxi by providing your pickup and drop-off locations.</li>
+            <p></p>
+            <li>View your bookings and manage your trips easily from your dashboard.</li>
+            <p></p>
+        </ol>
+    </section>
     
     <footer class="footer">
         <p>&copy; 2024 Taxi Booking Application. All rights reserved.</p>

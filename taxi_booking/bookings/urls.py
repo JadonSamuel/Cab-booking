@@ -15,6 +15,11 @@ urlpatterns = [
     path('driver-dashboard/', views.driver_dashboard, name='driver_dashboard'),
     path('user_group_list/', views.user_group_list, name='user_group_list'),
     path('display_taxis/',views.display_taxis,name='taxis'),
+    path('register-driver/', views.register_driver, name='register-driver'),
+    path('activate/<uidb64>/<token>/', views.activate, name='activate'),
+    path('send-verification-email/',views.send_verification_email,name='email'),
+
+    
     
    
 ]
