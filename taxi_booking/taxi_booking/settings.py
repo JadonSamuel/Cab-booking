@@ -132,8 +132,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'b4a63e78a6deb5'
-EMAIL_HOST_PASSWORD = '1fdd801311d66b'
+EMAIL_HOST_USER = 'c9b60fc0cca220'
+EMAIL_HOST_PASSWORD = '444ce5278ed91c'
 
 
 

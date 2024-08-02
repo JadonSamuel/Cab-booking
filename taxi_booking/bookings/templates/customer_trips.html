@@ -10,7 +10,7 @@
     </div>
     {% for booking in customer_bookings %}
     <div class="trip">
-        <!-- Check if booking is completed -->
+      
         {% if booking.drop_time < now %}
             <div class="completed-label">Completed</div>
         {% endif %}

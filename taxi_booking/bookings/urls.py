@@ -18,6 +18,8 @@ urlpatterns = [
     path('register-driver/', views.register_driver, name='register-driver'),
     path('activate/<uidb64>/<token>/', views.activate, name='activate'),
     path('send-verification-email/',views.send_verification_email,name='email'),
+    path('reset-password/', views.password_reset_request, name='password_reset_request'),
+    path('reset-password-confirm/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),
 
     
     
