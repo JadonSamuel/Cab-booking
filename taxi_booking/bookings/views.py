@@ -23,7 +23,83 @@ from django.contrib.auth import login
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.html import strip_tags
+from django.views.decorators.cache import cache_control
+from django.views.decorators.http import require_POST
+import stripe
+from django.conf import settings
 
+
+stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
+
+def payment_view(request):
+    booking_details = request.session.get('booking_details')
+    if not booking_details:
+        messages.error(request, "No booking details found. Please start the booking process again.")
+        return redirect('book_taxi')
+    
+    context = {
+        'stripe_public_key': settings.STRIPE_TEST_PUBLIC_KEY,
+        'amount': booking_details['fare_amount'],
+    }
+    return render(request, 'payment.html', context)
+
+@require_POST
+def payment_process(request):
+    token = request.POST.get('stripeToken')
+    booking_details = request.session.get('booking_details')
+    
+    if not booking_details:
+        messages.error(request, "No booking details found. Please start the booking process again.")
+        return redirect('book_taxi')
+
+    try:
+        charge = stripe.Charge.create(
+            amount=int(booking_details['fare_amount'] * 100),  
+            currency='usd',
+            description='Taxi booking',
+            source=token
+        )
+        
+        
+        taxi = Taxi.objects.get(taxi_id=booking_details['taxi_id'])
+        customer = Customer.objects.get(customer_id=booking_details['customer_id'])
+        
+        booking = Booking.objects.create(
+            taxi=taxi,
+            customer=customer,
+            pickup_point=booking_details['pickup_point'],
+            drop_point=booking_details['drop_point'],
+            pickup_time=timezone.datetime.fromisoformat(booking_details['pickup_time']),
+            drop_time=timezone.datetime.fromisoformat(booking_details['drop_time']),
+            fare_amount=booking_details['fare_amount'],
+            booking_date=timezone.datetime.fromisoformat(booking_details['booking_date']).date(),
+            booking_time=timezone.datetime.fromisoformat(booking_details['booking_time'])
+        )
+        
+        update_taxi_location(booking.booking_id)
+        
+        taxi.earnings += booking_details['fare_amount']
+        taxi.save()
+        
+    
+        del request.session['booking_details']
+        
+        messages.success(request, f"Taxi booked successfully! Booking ID: {booking.booking_id}")
+        return redirect('payment_success')
+    except stripe.error.CardError as e:
+        messages.error(request, f"Payment failed: {e.error.message}")
+        return redirect('payment_error')
+    except Exception as e:
+        messages.error(request, f"An error occurred: {str(e)}")
+        return redirect('payment_error')
+
+def payment_success(request):
+    messages.success(request, "Payment successful and booking confirmed!")
+    return redirect('display_taxi_details')
+
+def payment_error(request):
+    messages.error(request, "Payment failed. Please try again or contact support.")
+    return redirect('book_taxi')
 
 points = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -166,8 +242,6 @@ def book_taxi(request):
             drop_point = form.cleaned_data['drop_point']
             pickup_time = form.cleaned_data['pickup_time']
 
-            
-            
             booking_time = timezone.now()
             booking_date = timezone.now().date()
 
@@ -175,39 +249,35 @@ def book_taxi(request):
                 messages.error(request, "Invalid pickup or drop point. Please try again.")
                 return redirect('book_taxi')
 
-            
             customer = request.user.customer
 
             travel_time = calculate_travel_time(pickup_point, drop_point)
             drop_time = pickup_time + timedelta(minutes=travel_time)
 
-            
-
             available_taxi = find_available_taxi(pickup_point, drop_point, pickup_time, drop_time)
 
             if available_taxi:
                 fare = calculate_amount(pickup_point, drop_point)
-                booking = Booking.objects.create(
-                    taxi=available_taxi,
-                    customer=customer,
-                    pickup_point=pickup_point,
-                    drop_point=drop_point,
-                    pickup_time=pickup_time,
-                    drop_time=drop_time,
-                    fare_amount=fare,
-                    booking_date=booking_date,
-                    booking_time=booking_time
-                )
-                update_taxi_location(booking.booking_id)
-
-                available_taxi.earnings += fare
-                available_taxi.save()
-                messages.success(request, f"Taxi booked successfully! Booking ID: {booking.booking_id}")
-                return redirect('display_taxi_details')
+                
+              
+                request.session['booking_details'] = {
+                    'taxi_id': available_taxi.taxi_id,
+                    'customer_id': customer.customer_id,
+                    'pickup_point': pickup_point,
+                    'drop_point': drop_point,
+                    'pickup_time': pickup_time.isoformat(),
+                    'drop_time': drop_time.isoformat(),
+                    'fare_amount': fare,
+                    'booking_date': booking_date.isoformat(),
+                    'booking_time': booking_time.isoformat()
+                }
+                
+              
+                return redirect('payment_view')
             else:
                 messages.error(request, "No taxis available for the requested time. Please try a different time.")
         else:
-            messages.error(request, "Form is invalid" )
+            messages.error(request, "Form is invalid")
     else:
         form = BookingForm()
 
@@ -234,6 +304,7 @@ def find_available_taxi(pickup_point, drop_point, pickup_time, drop_time):
             return taxi
 
     return None
+
 
 @login_required
 def display_bookings(request):
@@ -269,6 +340,7 @@ def display_bookings(request):
         'total_spent': total_spent
     }
     return render(request, 'display_taxi_details.html', context)
+
 
 @login_required
 @customer_required
@@ -455,6 +527,7 @@ def view_customer_trips(request, customer_id):
         messages.error(request, "You don't have permission to view these trips.")
         return redirect('display_taxi_details')
     
+
 def password_reset_request(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -647,6 +720,7 @@ def driver_dashboard(request):
 def is_admin(user):
     return user.is_superuser
 
+
 @admin_required
 def user_group_list(request):
     if not request.user.is_superuser:
@@ -661,6 +735,7 @@ def user_group_list(request):
     }
     return render(request, 'user_group_list.html', context)
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def display_taxis(request):
 

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Complete your payment{% endblock %}
+
+{% block content %}
+<style>
+  #payment-form {
+    max-width: 400px;
+    margin: 40px auto;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    font-family: 'Arial', sans-serif;
+  }
+
+  #card-element {
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    background-color: #f0f0f0;
+    transition: background-color 0.3s ease;
+  }
+
+  #card-element:focus {
+    background-color: #e8e8e8;
+    outline: none;
+  }
+
+  #payment-form button {
+    margin-top: 24px;
+    width: 100%;
+    padding: 14px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+  }
+
+  #payment-form button:hover {
+    background-color: #45a049;
+  }
+
+  .error {
+    color: #ff3860;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+
+  .form-title {
+    text-align: center;
+    color: #333;
+    margin-bottom: 24px;
+    font-size: 24px;
+  }
+
+  .form-subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 16px;
+  }
+
+  .secure-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 16px;
+    color: #666;
+    font-size: 14px;
+  }
+
+  .secure-badge img {
+    width: 20px;
+    margin-right: 8px;
+  }
+</style>
+
+<form id="payment-form" method="post" action="{% url 'payment_process' %}">
+  {% csrf_token %}
+  <h2 class="form-title">Complete Your Payment</h2>
+  <p class="form-subtitle">Enter your card details below</p>
+  <div id="card-element">
+    
+  </div>
+  <button type="submit">Pay Now</button>
+  <div class="secure-badge">
+    
+    <span>Secure payment processed by Stripe</span>
+  </div>
+</form>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  var stripe = Stripe('{{ stripe_public_key }}');
+  var elements = stripe.elements();
+  var card = elements.create('card');
+  card.mount('#card-element');
+
+  var form = document.getElementById('payment-form');
+  form.addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    stripe.createToken(card).then(function(result) {
+      if (result.error) {
+      
+        var errorElement = document.getElementById('card-errors');
+        errorElement.textContent = result.error.message;
+      } else {
+        
+        var token = result.token.id;
+        var hiddenInput = document.createElement('input');
+        hiddenInput.setAttribute('type', 'hidden');
+        hiddenInput.setAttribute('name', 'stripeToken');
+        hiddenInput.setAttribute('value', token);
+        form.appendChild(hiddenInput);
+
+        
+        form.submit();
+      }
+    });
+  });
+</script>
+{% endblock %}
