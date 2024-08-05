@@ -80,49 +80,63 @@
   }
 </style>
 
-<form id="payment-form" method="post" action="{% url 'payment_process' %}">
+<form id="payment-form" method="post" action="{% url 'payment_view' %}">
   {% csrf_token %}
   <h2 class="form-title">Complete Your Payment</h2>
   <p class="form-subtitle">Enter your card details below</p>
-  <div id="card-element">
-    
-  </div>
+  <div id="card-element"></div>
+  <input type="hidden" name="payment_intent_id" id="payment-intent-id" value="{{ payment_intent_id }}">
+  <input type="hidden" name="payment_method_id" id="payment-method-id">
   <button type="submit">Pay Now</button>
   <div class="secure-badge">
-    
     <span>Secure payment processed by Stripe</span>
   </div>
 </form>
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-  var stripe = Stripe('{{ stripe_public_key }}');
-  var elements = stripe.elements();
-  var card = elements.create('card');
-  card.mount('#card-element');
+document.addEventListener('DOMContentLoaded', function() {
+    var stripe = Stripe('{{ stripe_public_key }}');
+    var elements = stripe.elements();
+    
+    var cardElement = elements.create('card');
+    cardElement.mount('#card-element');
 
-  var form = document.getElementById('payment-form');
-  form.addEventListener('submit', function(event) {
-    event.preventDefault();
+    var form = document.getElementById('payment-form');
+    var paymentIntentId = document.getElementById('payment-intent-id').value;
+    
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
 
-    stripe.createToken(card).then(function(result) {
-      if (result.error) {
-      
-        var errorElement = document.getElementById('card-errors');
-        errorElement.textContent = result.error.message;
-      } else {
-        
-        var token = result.token.id;
-        var hiddenInput = document.createElement('input');
-        hiddenInput.setAttribute('type', 'hidden');
-        hiddenInput.setAttribute('name', 'stripeToken');
-        hiddenInput.setAttribute('value', token);
-        form.appendChild(hiddenInput);
-
-        
-        form.submit();
-      }
+        stripe.createPaymentMethod({
+            type: 'card',
+            card: cardElement
+        }).then(function(result) {
+            if (result.error) {
+                console.error(result.error.message);
+            } else {
+                fetch('{% url "payment_view" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({
+                        payment_method_id: result.paymentMethod.id,
+                        payment_intent_id: paymentIntentId
+                    })
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.href = "{% url 'payment_success' %}";
+                    } else {
+                        console.error('Payment failed');
+                        window.location.href = "{% url 'payment_error' %}";
+                    }
+                });
+            }
+        });
     });
-  });
+});
 </script>
+
 {% endblock %}

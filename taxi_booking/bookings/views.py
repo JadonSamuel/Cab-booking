@@ -27,71 +27,79 @@ from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_POST
 import stripe
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 
 
 stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
 
+def create_payment_intent(amount):
+    intent = stripe.PaymentIntent.create(
+        amount=amount,
+        currency='usd',
+    )
+    return intent.client_secret
+
+
+
+@csrf_exempt
 def payment_view(request):
-    booking_details = request.session.get('booking_details')
-    if not booking_details:
-        messages.error(request, "No booking details found. Please start the booking process again.")
-        return redirect('book_taxi')
-    
-    context = {
-        'stripe_public_key': settings.STRIPE_TEST_PUBLIC_KEY,
-        'amount': booking_details['fare_amount'],
-    }
-    return render(request, 'payment.html', context)
+    if request.method == 'POST':
+        payment_method_id = request.POST.get('payment_method_id')
+        payment_intent_id = request.POST.get('payment_intent_id')
+        
+        try:
+            
+            if not payment_intent_id:
+                amount = 35000 
+                intent = stripe.PaymentIntent.create(
+                    amount=amount,
+                    currency='usd',
+                    payment_method_types=['card'],
+                    automatic_payment_methods={
+                        'enabled': True,
+                        'allow_redirects': 'never'
+                    }
+                )
+                payment_intent_id = intent.id
 
-@require_POST
-def payment_process(request):
-    token = request.POST.get('stripeToken')
-    booking_details = request.session.get('booking_details')
-    
-    if not booking_details:
-        messages.error(request, "No booking details found. Please start the booking process again.")
-        return redirect('book_taxi')
+            
+            confirmed_intent = stripe.PaymentIntent.confirm(
+                payment_intent_id,
+                payment_method=payment_method_id,
+            )
 
-    try:
-        charge = stripe.Charge.create(
-            amount=int(booking_details['fare_amount'] * 100),  
-            currency='usd',
-            description='Taxi booking',
-            source=token
-        )
-        
-        
-        taxi = Taxi.objects.get(taxi_id=booking_details['taxi_id'])
-        customer = Customer.objects.get(customer_id=booking_details['customer_id'])
-        
-        booking = Booking.objects.create(
-            taxi=taxi,
-            customer=customer,
-            pickup_point=booking_details['pickup_point'],
-            drop_point=booking_details['drop_point'],
-            pickup_time=timezone.datetime.fromisoformat(booking_details['pickup_time']),
-            drop_time=timezone.datetime.fromisoformat(booking_details['drop_time']),
-            fare_amount=booking_details['fare_amount'],
-            booking_date=timezone.datetime.fromisoformat(booking_details['booking_date']).date(),
-            booking_time=timezone.datetime.fromisoformat(booking_details['booking_time'])
-        )
-        
-        update_taxi_location(booking.booking_id)
-        
-        taxi.earnings += booking_details['fare_amount']
-        taxi.save()
-        
+            
+            if confirmed_intent.status == 'succeeded':
+            
+                booking_details = request.session.get('booking_details')
+                if booking_details:
+                    Booking.objects.create(
+                        taxi_id=booking_details['taxi_id'],
+                        customer_id=booking_details['customer_id'],
+                        pickup_point=booking_details['pickup_point'],
+                        drop_point=booking_details['drop_point'],
+                        pickup_time=booking_details['pickup_time'],
+                        drop_time=booking_details['drop_time'],
+                        fare_amount=booking_details['fare_amount'],
+                        booking_date=booking_details['booking_date'],
+                        booking_time=booking_details['booking_time'],
+                    )
+                return redirect('payment_success')
+            else:
+                
+                return redirect('payment_error')
+
+        except stripe.error.StripeError as e:
+            
+            print(f"Stripe error: {e}")
+            return redirect('payment_error')
+        except Exception as e:
+            
+            print(f"Unexpected error: {e}")
+            return redirect('payment_error')
     
-        del request.session['booking_details']
-        
-        messages.success(request, f"Taxi booked successfully! Booking ID: {booking.booking_id}")
-        return redirect('payment_success')
-    except stripe.error.CardError as e:
-        messages.error(request, f"Payment failed: {e.error.message}")
-        return redirect('payment_error')
-    except Exception as e:
-        messages.error(request, f"An error occurred: {str(e)}")
-        return redirect('payment_error')
+    
+    return redirect('payment_error')
 
 def payment_success(request):
     messages.success(request, "Payment successful and booking confirmed!")
@@ -231,7 +239,6 @@ def perform_location_update(taxi_id, new_location):
     except Exception as e:
         print(f"An error occurred while performing location update: {str(e)}")
 
-
 @login_required
 @customer_required
 def book_taxi(request):
@@ -259,7 +266,14 @@ def book_taxi(request):
             if available_taxi:
                 fare = calculate_amount(pickup_point, drop_point)
                 
-              
+                
+                intent = stripe.PaymentIntent.create(
+                    amount=fare * 100,  
+                    currency='usd',
+                    description=f'Taxi booking from {pickup_point} to {drop_point}',
+                )
+                client_secret = intent.client_secret
+
                 request.session['booking_details'] = {
                     'taxi_id': available_taxi.taxi_id,
                     'customer_id': customer.customer_id,
@@ -269,11 +283,15 @@ def book_taxi(request):
                     'drop_time': drop_time.isoformat(),
                     'fare_amount': fare,
                     'booking_date': booking_date.isoformat(),
-                    'booking_time': booking_time.isoformat()
+                    'booking_time': booking_time.isoformat(),
+                    'payment_intent_id': intent.id
                 }
                 
-              
-                return redirect('payment_view')
+                return render(request, 'payment.html', {
+                    'client_secret': client_secret,
+                    'stripe_public_key': settings.STRIPE_TEST_PUBLIC_KEY,
+                    'payment_intent_id': intent.id
+                })
             else:
                 messages.error(request, "No taxis available for the requested time. Please try a different time.")
         else:
@@ -282,7 +300,6 @@ def book_taxi(request):
         form = BookingForm()
 
     return render(request, 'book_taxi.html', {'form': form})
-
 
 def find_available_taxi(pickup_point, drop_point, pickup_time, drop_time):
     same_point_taxis = Taxi.objects.filter(current_location=pickup_point).order_by('earnings')
