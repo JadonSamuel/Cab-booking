@@ -20,9 +20,11 @@ urlpatterns = [
     path('send-verification-email/',views.send_verification_email,name='email'),
     path('reset-password/', views.password_reset_request, name='password_reset_request'),
     path('reset-password-confirm/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),
-    path('payment/', views.payment_view, name='payment_view'),
+    path('create-payment-intent/', views.create_payment_intent, name='create_payment_intent'),
+    path('confirm-payment/', views.confirm_payment, name='confirm_payment'),
     path('payment/success/', views.payment_success, name='payment_success'),
     path('payment/error/', views.payment_error, name='payment_error'),
+    path('debug/',views.debug_session,name='debug'),
 
     
     

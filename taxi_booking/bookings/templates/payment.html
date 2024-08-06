@@ -80,7 +80,7 @@
   }
 </style>
 
-<form id="payment-form" method="post" action="{% url 'payment_view' %}">
+<form id="payment-form" method="post" action="{% url 'create_payment_intent' %}">
   {% csrf_token %}
   <h2 class="form-title">Complete Your Payment</h2>
   <p class="form-subtitle">Enter your card details below</p>
@@ -103,37 +103,52 @@ document.addEventListener('DOMContentLoaded', function() {
     cardElement.mount('#card-element');
 
     var form = document.getElementById('payment-form');
-    var paymentIntentId = document.getElementById('payment-intent-id').value;
     
     form.addEventListener('submit', function(event) {
         event.preventDefault();
 
-        stripe.createPaymentMethod({
-            type: 'card',
-            card: cardElement
-        }).then(function(result) {
-            if (result.error) {
-                console.error(result.error.message);
-            } else {
-                fetch('{% url "payment_view" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: new URLSearchParams({
-                        payment_method_id: result.paymentMethod.id,
-                        payment_intent_id: paymentIntentId
-                    })
-                }).then(response => {
-                    if (response.ok) {
-                        window.location.href = "{% url 'payment_success' %}";
-                    } else {
-                        console.error('Payment failed');
-                        window.location.href = "{% url 'payment_error' %}";
-                    }
-                });
+        fetch('{% url "create_payment_intent" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
             }
+        })
+        .then(response => response.json())
+        .then(data => {
+            stripe.confirmCardPayment(data.clientSecret, {
+                payment_method: {
+                    card: cardElement,
+                }
+            }).then(function(result) {
+                if (result.error) {
+                    console.error(result.error.message);
+                    window.location.href = "{% url 'payment_error' %}";
+                } else {
+                    
+                    if (result.paymentIntent.status === 'succeeded') {
+                        
+                        fetch('{% url "confirm_payment" %}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({
+                                payment_intent_id: result.paymentIntent.id
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                window.location.href = "{% url 'payment_success' %}";
+                            } else {
+                                console.error('Booking creation failed');
+                                window.location.href = "{% url 'payment_error' %}";
+                            }
+                        });
+                    }
+                }
+            });
         });
     });
 });
