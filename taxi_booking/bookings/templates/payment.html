@@ -39,11 +39,33 @@
     font-size: 18px;
     font-weight: bold;
     transition: background-color 0.3s ease;
-  }
+    position: relative; /* Added for positioning the loader */
+}
 
-  #payment-form button:hover {
-    background-color: #45a049;
-  }
+#payment-form button.loading {
+    background-color: #9e9e9e;
+    cursor: not-allowed;
+}
+
+#payment-form button.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 3px solid #ffffff;
+    border-top: 3px solid #4CAF50;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 
   .error {
     color: #ff3860;
@@ -95,63 +117,90 @@
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var stripe = Stripe('{{ stripe_public_key }}');
-    var elements = stripe.elements();
-    
-    var cardElement = elements.create('card');
-    cardElement.mount('#card-element');
-
-    var form = document.getElementById('payment-form');
-    
-    form.addEventListener('submit', function(event) {
-        event.preventDefault();
-
-        fetch('{% url "create_payment_intent" %}', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            stripe.confirmCardPayment(data.clientSecret, {
-                payment_method: {
-                    card: cardElement,
-                }
-            }).then(function(result) {
-                if (result.error) {
-                    console.error(result.error.message);
-                    window.location.href = "{% url 'payment_error' %}";
-                } else {
-                    
-                    if (result.paymentIntent.status === 'succeeded') {
-                        
-                        fetch('{% url "confirm_payment" %}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': '{{ csrf_token }}'
-                            },
-                            body: JSON.stringify({
-                                payment_intent_id: result.paymentIntent.id
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                window.location.href = "{% url 'payment_success' %}";
-                            } else {
-                                console.error('Booking creation failed');
-                                window.location.href = "{% url 'payment_error' %}";
-                            }
-                        });
-                    }
-                }
-            });
-        });
-    });
-});
-</script>
+  document.addEventListener('DOMContentLoaded', function() {
+      var stripe = Stripe('{{ stripe_public_key }}');
+      var elements = stripe.elements();
+      
+      var cardElement = elements.create('card');
+      cardElement.mount('#card-element');
+  
+      var form = document.getElementById('payment-form');
+      var payButton = form.querySelector('button');
+      
+      form.addEventListener('submit', function(event) {
+          event.preventDefault();
+  
+        
+          payButton.classList.add('loading');
+          
+          fetch('{% url "create_payment_intent" %}', {
+              method: 'POST',
+              headers: {
+                  'X-CSRFToken': '{{ csrf_token }}'
+              }
+          })
+          .then(response => response.json())
+          .then(data => {
+              stripe.confirmCardPayment(data.clientSecret, {
+                  payment_method: {
+                      card: cardElement,
+                  }
+              }).then(function(result) {
+                  if (result.error) {
+                      console.error(result.error.message);
+                      
+                      window.location.href = "{% url 'payment_error' %}";
+                  } else {
+                      if (result.paymentIntent.status === 'succeeded') {
+                          fetch('{% url "confirm_payment" %}', {
+                              method: 'POST',
+                              headers: {
+                                  'Content-Type': 'application/json',
+                                  'X-CSRFToken': '{{ csrf_token }}'
+                              },
+                              body: JSON.stringify({
+                                  payment_intent_id: result.paymentIntent.id
+                              })
+                          })
+                          .then(response => response.json())
+                          .then(data => {
+                              if (data.success) {
+                                  
+                                  window.location.href = "{% url 'payment_success' %}";
+                              } else {
+                                  console.error('Booking creation failed');
+                                  
+                                  window.location.href = "{% url 'payment_error' %}";
+                              }
+                          })
+                          .finally(() => {
+                              
+                              payButton.classList.remove('loading');
+                          });
+                      } else {
+                          
+                          payButton.classList.remove('loading');
+                      }
+                  }
+              })
+              .catch(error => {
+                  console.error('Error:', error);
+                  
+                  window.location.href = "{% url 'payment_error' %}";
+                  
+                  payButton.classList.remove('loading');
+              });
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              
+              window.location.href = "{% url 'payment_error' %}";
+              
+              payButton.classList.remove('loading');
+          });
+      });
+  });
+  </script>
+  
 
 {% endblock %}

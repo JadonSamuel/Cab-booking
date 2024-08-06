@@ -24,7 +24,7 @@ urlpatterns = [
     path('confirm-payment/', views.confirm_payment, name='confirm_payment'),
     path('payment/success/', views.payment_success, name='payment_success'),
     path('payment/error/', views.payment_error, name='payment_error'),
-    path('debug/',views.debug_session,name='debug'),
+    
 
     
     

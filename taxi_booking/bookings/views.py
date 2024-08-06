@@ -24,15 +24,11 @@ from django.contrib.auth import login
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.html import strip_tags
-from django.views.decorators.cache import cache_control
-from django.views.decorators.http import require_POST
 import stripe
 from django.conf import settings
-from django.views.decorators.csrf import csrf_exempt
-from django.urls import reverse
 from django.http import JsonResponse
 import json
-from django.contrib.sessions.models import Session
+
 
 logger = logging.getLogger(__name__)
 
@@ -82,18 +78,19 @@ def create_payment_intent(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
-
 def confirm_payment(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             payment_intent_id = data.get('payment_intent_id')
 
+            
             intent = stripe.PaymentIntent.retrieve(payment_intent_id)
 
             if intent.status == 'succeeded':
                 
                 booking_details = request.session.get('booking_details')
+                
                 if booking_details:
                     
                     booking_data = {
@@ -108,14 +105,21 @@ def confirm_payment(request):
                         'fare_amount': booking_details['fare_amount'],
                     }
                     
-                    Booking.objects.create(**booking_data)
+                    
+                    booking = Booking.objects.create(**booking_data)
+                    
+                    
+                    update_taxi_location(booking.booking_id)
+                    
+                    
+                    del request.session['booking_details']
+
                 return JsonResponse({'success': True})
             else:
                 return JsonResponse({'error': 'Payment unsuccessful'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=403)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
-
 
 
 def payment_success(request):
@@ -256,9 +260,7 @@ def perform_location_update(taxi_id, new_location):
     except Exception as e:
         print(f"An error occurred while performing location update: {str(e)}")
 
-def debug_session(request):
-    booking_details = request.session.get('booking_details', {})
-    return render(request, 'debug_session.html', {'booking_details': booking_details})
+
 
 @login_required
 @customer_required
@@ -786,7 +788,7 @@ def user_group_list(request):
     }
     return render(request, 'user_group_list.html', context)
 
-@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+
 @admin_required
 def display_taxis(request):
 
