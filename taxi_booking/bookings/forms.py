@@ -74,7 +74,11 @@ class UserRegistrationForm(UserCreationForm):
 
 
 class CustomerRegistrationForm(UserCreationForm):
-    email = forms.EmailField()
+    email = forms.EmailField(required=True)
+    address_line1 = forms.CharField(max_length=255, required=True)
+    city = forms.CharField(max_length=100, required=True)
+    postal_code = forms.CharField(max_length=20, required=True)
+    country = forms.CharField(max_length=100, required=True)
 
     class Meta:
         model = User

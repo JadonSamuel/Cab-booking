@@ -1,5 +1,6 @@
 import threading
 from threading import Timer
+import logging
 from threading import Lock
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -27,71 +28,95 @@ from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_POST
 import stripe
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.urls import reverse
+from django.http import JsonResponse
+import json
+from django.contrib.sessions.models import Session
 
+logger = logging.getLogger(__name__)
 
 stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
 
-def payment_view(request):
-    booking_details = request.session.get('booking_details')
-    if not booking_details:
-        messages.error(request, "No booking details found. Please start the booking process again.")
-        return redirect('book_taxi')
-    
-    context = {
-        'stripe_public_key': settings.STRIPE_TEST_PUBLIC_KEY,
-        'amount': booking_details['fare_amount'],
-    }
-    return render(request, 'payment.html', context)
 
-@require_POST
-def payment_process(request):
-    token = request.POST.get('stripeToken')
-    booking_details = request.session.get('booking_details')
-    
-    if not booking_details:
-        messages.error(request, "No booking details found. Please start the booking process again.")
-        return redirect('book_taxi')
+def create_payment_intent(request):
+    if request.method == 'POST':
+        try:
+            booking_details = request.session.get('booking_details')
+            if not booking_details:
+                return JsonResponse({'error': 'Booking details not found'}, status=400)
 
-    try:
-        charge = stripe.Charge.create(
-            amount=int(booking_details['fare_amount'] * 100),  
-            currency='usd',
-            description='Taxi booking',
-            source=token
-        )
-        
-        
-        taxi = Taxi.objects.get(taxi_id=booking_details['taxi_id'])
-        customer = Customer.objects.get(customer_id=booking_details['customer_id'])
-        
-        booking = Booking.objects.create(
-            taxi=taxi,
-            customer=customer,
-            pickup_point=booking_details['pickup_point'],
-            drop_point=booking_details['drop_point'],
-            pickup_time=timezone.datetime.fromisoformat(booking_details['pickup_time']),
-            drop_time=timezone.datetime.fromisoformat(booking_details['drop_time']),
-            fare_amount=booking_details['fare_amount'],
-            booking_date=timezone.datetime.fromisoformat(booking_details['booking_date']).date(),
-            booking_time=timezone.datetime.fromisoformat(booking_details['booking_time'])
-        )
-        
-        update_taxi_location(booking.booking_id)
-        
-        taxi.earnings += booking_details['fare_amount']
-        taxi.save()
-        
-    
-        del request.session['booking_details']
-        
-        messages.success(request, f"Taxi booked successfully! Booking ID: {booking.booking_id}")
-        return redirect('payment_success')
-    except stripe.error.CardError as e:
-        messages.error(request, f"Payment failed: {e.error.message}")
-        return redirect('payment_error')
-    except Exception as e:
-        messages.error(request, f"An error occurred: {str(e)}")
-        return redirect('payment_error')
+            logger.info(f"Booking details: {booking_details}")
+
+            amount = booking_details['fare_amount'] * 100
+            customer_name = booking_details.get('customer_name', 'Customer')
+
+            address_line1 = booking_details.get('address_line1')
+            city = booking_details.get('city')
+            postal_code = booking_details.get('postal_code')
+            country = booking_details.get('country')
+
+            if not all([address_line1, city, postal_code, country]):
+                return JsonResponse({'error': 'Incomplete address details'}, status=400)
+
+            intent = stripe.PaymentIntent.create(
+                amount=amount,
+                currency='usd',
+                description=f"Taxi booking for trip from {booking_details['pickup_point']} to {booking_details['drop_point']}",
+                automatic_payment_methods={'enabled': True},
+                shipping={
+                    'name': customer_name,
+                    'address': {
+                        'line1': address_line1,
+                        'city': city,
+                        'postal_code': postal_code,
+                        'country': country
+                    }
+                }
+            )
+
+            return JsonResponse({'clientSecret': intent.client_secret})
+        except Exception as e:
+            logger.error(f"Error creating payment intent: {e}")
+            return JsonResponse({'error': str(e)}, status=403)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+def confirm_payment(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            payment_intent_id = data.get('payment_intent_id')
+
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+
+            if intent.status == 'succeeded':
+                
+                booking_details = request.session.get('booking_details')
+                if booking_details:
+                    
+                    booking_data = {
+                        'taxi_id': booking_details['taxi_id'],
+                        'customer_id': booking_details['customer_id'],
+                        'pickup_point': booking_details['pickup_point'],
+                        'drop_point': booking_details['drop_point'],
+                        'pickup_time': booking_details['pickup_time'],
+                        'drop_time': booking_details['drop_time'],
+                        'booking_date': booking_details['booking_date'],
+                        'booking_time': booking_details['booking_time'],
+                        'fare_amount': booking_details['fare_amount'],
+                    }
+                    
+                    Booking.objects.create(**booking_data)
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'error': 'Payment unsuccessful'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=403)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
 
 def payment_success(request):
     messages.success(request, "Payment successful and booking confirmed!")
@@ -231,6 +256,9 @@ def perform_location_update(taxi_id, new_location):
     except Exception as e:
         print(f"An error occurred while performing location update: {str(e)}")
 
+def debug_session(request):
+    booking_details = request.session.get('booking_details', {})
+    return render(request, 'debug_session.html', {'booking_details': booking_details})
 
 @login_required
 @customer_required
@@ -258,22 +286,37 @@ def book_taxi(request):
 
             if available_taxi:
                 fare = calculate_amount(pickup_point, drop_point)
-                
-              
+
+               
+                address_line1 = customer.address_line1
+                city = customer.city
+                postal_code = customer.postal_code
+                country = customer.country
+
+               
                 request.session['booking_details'] = {
                     'taxi_id': available_taxi.taxi_id,
                     'customer_id': customer.customer_id,
+                    'customer_name': customer.customer_name,
                     'pickup_point': pickup_point,
                     'drop_point': drop_point,
                     'pickup_time': pickup_time.isoformat(),
                     'drop_time': drop_time.isoformat(),
                     'fare_amount': fare,
                     'booking_date': booking_date.isoformat(),
-                    'booking_time': booking_time.isoformat()
+                    'booking_time': booking_time.isoformat(),
+                    'address_line1': address_line1,
+                    'city': city,
+                    'postal_code': postal_code,
+                    'country': country,
+
+                
                 }
                 
-              
-                return redirect('payment_view')
+
+                return render(request, 'payment.html', {
+                    'stripe_public_key': settings.STRIPE_TEST_PUBLIC_KEY,
+                })
             else:
                 messages.error(request, "No taxis available for the requested time. Please try a different time.")
         else:
@@ -645,7 +688,15 @@ def register(request):
             user.email = form.cleaned_data['email']
             user.save()
 
-            Customer.objects.create(user=user, customer_name=form.cleaned_data['username'])
+           
+            Customer.objects.create(
+                user=user,
+                customer_name=form.cleaned_data['username'],
+                address_line1=form.cleaned_data['address_line1'],
+                city=form.cleaned_data['city'],
+                postal_code=form.cleaned_data['postal_code'],
+                country=form.cleaned_data['country']
+            )
 
             customer_group = Group.objects.get(name='Customer')
             user.groups.add(customer_group)
