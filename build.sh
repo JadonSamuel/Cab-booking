@@ -3,7 +3,7 @@
 set -o errexit
 
 # Activate the virtual environment
-source env/bin/activate
+source env/Scripts/activate
 
 # Generate the requirements.txt file
 pip freeze > requirements.txt
